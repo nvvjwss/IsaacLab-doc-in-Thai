@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IsaacLab Docs (TH)</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans+Thai:wght@300;400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/main.css">
+  <link rel="stylesheet" href="../css/docs.css">
+</head>
+<body>
+
+<!-- Sidebar -->
+<aside nav class="sidebar">
+  <div class="sidebar-logo">
+    <span>Isaac Lab Docs</span>
+    <span class="version">Tutorial Series · TH</span>
+  </div>
+
+  <div class="nav-section">Tutorials 00_sim</div>
+  <a class="nav-item active" href="#create-empty">การสร้าง Empty Scene</a>
+  <a class="nav-item" href="#spawn-prims">การ Spawn Prims</a>
+  <a class="nav-item" href="#applaunch">Deep-dive into AppLauncher</a>
+  <div class="nav-section">Tutorials 01_assets</div>
+  <a class="nav-item" href="#new-robot">การเพิ่ม Robot ใหม่</a>
+</aside>
+
+<!-- Main -->
+<div class="main">
+  <div class="topbar">
+    <div class="breadcrumb">
+      <span>Isaac Lab</span>
+      <span class="sep">›</span>
+      <span>Tutorials</span>
+      <span class="sep">›</span>
+      <span>00_sim</span>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- ===== SECTION 1 ===== -->
+    <div class="tutorial-section" id="create-empty">
+      <div class="section-badge">Tutorial 01</div>
+      <h1>การสร้าง Empty Scene</h1>
+      <p>Tutorial นี้สาธิตวิธีการเปิดและควบคุม Isaac Sim simulator จาก standalone Python script โดยตั้งค่า empty scene ใน Isaac Lab และแนะนำ 2 classes หลักที่ใช้ใน framework ได้แก่ <code>app.AppLauncher</code> และ <code>sim.SimulationContext</code></p>
+      <p>กรุณาอ่าน Isaac Sim Workflows ก่อนเริ่ม tutorial นี้เพื่อทำความเข้าใจเบื้องต้นเกี่ยวกับการทำงานกับ simulator</p>
+
+      <div class="callout callout-note">
+        <div class="callout-icon">📄</div>
+        <div>
+          <div class="callout-title">Code</div>
+          <p>tutorial นี้ตรงกับ script <code>create_empty.py</code> ในไดเรกทอรี <code>scripts/tutorials/00_sim</code></p>
+        </div>
+      </div>
+
+      <h2>อธิบาย Code</h2>
+
+      <h3>การเปิด Simulator</h3>
+      <p>ขั้นตอนแรกเมื่อทำงานกับ standalone Python scripts คือการเปิด simulation application ซึ่งจำเป็นต้องทำตั้งแต่ต้น เนื่องจาก dependency modules ต่างๆ ของ Isaac Sim จะพร้อมใช้งานหลังจาก simulation app ทำงานแล้วเท่านั้น</p>
+      <p>ทำได้โดย import class <code>app.AppLauncher</code> ซึ่งเป็น utility class ที่ wrap รอบ <code>isaacsim.SimulationApp</code> class เพื่อเปิด simulator และมีกลไกในการกำหนดค่า simulator ผ่าน command-line arguments และ environment variables</p>
+      <p>สำหรับ tutorial นี้ เราดูการเพิ่ม command-line options เข้าไปใน <code>argparse.ArgumentParser</code> ที่ผู้ใช้กำหนดเอง โดยส่ง parser instance ไปยัง method <code>app.AppLauncher.add_app_launcher_args()</code> ซึ่งจะเพิ่ม parameters ต่างๆ เข้าไป เช่น การเปิด app แบบ headless, การกำหนดค่า Livestream options และการเปิดใช้งาน off-screen rendering</p>
+
+      <pre data-lang="python"><code><span class="kw">import</span> argparse
+<span class="kw">from</span> isaaclab.app <span class="kw">import</span> <span class="cls">AppLauncher</span>
+
+<span class="cm"># สร้าง argparser</span>
+parser = argparse.<span class="fn">ArgumentParser</span>(description=<span class="str">"Tutorial on creating an empty stage."</span>)
+<span class="cm"># เพิ่ม AppLauncher cli args</span>
+<span class="cls">AppLauncher</span>.<span class="fn">add_app_launcher_args</span>(parser)
+<span class="cm"># parse arguments</span>
+args_cli = parser.<span class="fn">parse_args</span>()
+<span class="cm"># เปิด omniverse app</span>
+app_launcher = <span class="cls">AppLauncher</span>(args_cli)
+simulation_app = app_launcher.app</code></pre>
+
+      <h3>การ Import Python Modules</h3>
+      <p>เมื่อ simulation app ทำงานแล้ว สามารถ import Python modules ต่างๆ จาก Isaac Sim ได้ โดยในที่นี้ import module ดังต่อไปนี้:</p>
+      <p><code>isaaclab.sim</code>: sub-package ใน Isaac Lab สำหรับ core simulator-related operations ทั้งหมด</p>
+
+      <pre data-lang="python"><code><span class="kw">from</span> isaaclab.sim <span class="kw">import</span> <span class="cls">SimulationCfg</span>, <span class="cls">SimulationContext</span></code></pre>
+
+      <h3>การกำหนดค่า Simulation Context</h3>
+      <p>เมื่อเปิด simulator จาก standalone script ผู้ใช้จะมีการควบคุมอย่างสมบูรณ์ในการ play, pause และ step simulator โดย operations เหล่านี้ทั้งหมดจัดการผ่าน simulation context ซึ่งดูแล timeline events ต่างๆ และกำหนดค่า physics scene สำหรับ simulation</p>
+      <p>ใน Isaac Lab, class <code>sim.SimulationContext</code> สืบทอดมาจาก <code>isaacsim.core.api.simulation_context.SimulationContext</code> ของ Isaac Sim เพื่อให้สามารถกำหนดค่า simulation ผ่าน Python dataclass object และจัดการกับความซับซ้อนของการ step simulation</p>
+      <p>สำหรับ tutorial นี้ เราตั้งค่า physics และ rendering time step เป็น 0.01 วินาที</p>
+
+      <pre data-lang="python"><code><span class="cm"># Initialize the simulation context</span>
+sim_cfg = <span class="cls">SimulationCfg</span>(dt=<span class="num">0.01</span>)
+sim = <span class="cls">SimulationContext</span>(sim_cfg)
+<span class="cm"># Set main camera</span>
+sim.<span class="fn">set_camera_view</span>([<span class="num">2.5</span>, <span class="num">2.5</span>, <span class="num">2.5</span>], [<span class="num">0.0</span>, <span class="num">0.0</span>, <span class="num">0.0</span>])</code></pre>
+
+      <p>หลังจากสร้าง simulation context แล้ว เรากำหนดค่าเฉพาะ physics ที่ทำงานบน simulated scene ซึ่งรวมถึง device ที่ใช้สำหรับ simulation, gravity vector และ solver parameters ขั้นสูงอื่นๆ ขั้นตอนหลักอีก 2 ขั้นตอนที่เหลือ ได้แก่:</p>
+      <ul>
+        <li><strong>การออกแบบ simulation scene</strong>: การเพิ่ม sensors, robots และ simulated objects อื่นๆ</li>
+        <li><strong>การรัน simulation loop</strong>: การ step simulator และการ set และ get ข้อมูลจาก simulator</li>
+      </ul>
+      <p>ใน tutorial นี้ เราดู Step 2 ก่อนสำหรับ empty scene เพื่อโฟกัสที่การควบคุม simulation ก่อน</p>
+
+      <h3>การรัน Simulation</h3>
+      <p>สิ่งแรกหลังจากตั้งค่า simulation scene คือการเรียก method <code>sim.SimulationContext.reset()</code> ซึ่งจะ play timeline และ initialize physics handles ใน simulator ต้องเรียกใช้ครั้งแรกเสมอก่อนที่จะ step simulator</p>
+
+      <div class="callout callout-note">
+        <div class="callout-icon">ℹ️</div>
+        <div>
+          <div class="callout-title">หมายเหตุ</div>
+          <p><code>sim.SimulationContext.reset()</code> แตกต่างจาก <code>sim.SimulationContext.play()</code> เนื่องจาก method หลังจะ play timeline เท่านั้นและไม่ได้ initialize physics handles</p>
+        </div>
+      </div>
+
+      <pre data-lang="python"><code><span class="cm"># Play the simulator</span>
+sim.<span class="fn">reset</span>()
+<span class="fn">print</span>(<span class="str">"[INFO]: Setup complete..."</span>)
+
+<span class="cm"># Simulate physics</span>
+<span class="kw">while</span> simulation_app.<span class="fn">is_running</span>():
+    sim.<span class="fn">step</span>()</code></pre>
+
+      <h3>การปิด Simulation</h3>
+      <pre data-lang="python"><code><span class="cm"># close sim app</span>
+simulation_app.<span class="fn">close</span>()</code></pre>
+
+      <h2>การรัน Code</h2>
+      <div class="terminal">
+        <div class="terminal-bar">
+          <div class="terminal-dot"></div><div class="terminal-dot"></div><div class="terminal-dot"></div>
+          <span class="terminal-title">bash</span>
+        </div>
+        <pre><code><span class="prompt">$</span> ./isaaclab.sh -p scripts/tutorials/00_sim/create_empty.py</code></pre>
+      </div>
+      <p>simulation ควรจะเริ่ม play และ stage ควรจะ render ขึ้นมา กด <code>Ctrl+C</code> เพื่อหยุด</p>
+      <p>หากต้องการรันแบบ headless:</p>
+      <div class="terminal">
+        <div class="terminal-bar">
+          <div class="terminal-dot"></div><div class="terminal-dot"></div><div class="terminal-dot"></div>
+          <span class="terminal-title">bash</span>
+        </div>
+        <pre><code><span class="prompt">$</span> ./isaaclab.sh -p scripts/tutorials/00_sim/create_empty.py --headless</code></pre>
+      </div>
+      <p>ตอนนี้ที่เรามีความเข้าใจพื้นฐานเกี่ยวกับวิธีรัน simulation แล้ว มาดู tutorial ต่อไปที่เราจะเรียนรู้วิธีเพิ่ม assets เข้าไปใน stage กัน</p>
+    </div>
+
+    <!-- ===== SECTION 2 ===== -->
+    <div class="tutorial-section" id="spawn-prims">
+      <div class="section-badge">Tutorial 02</div>
+      <h1>การ Spawn Prims เข้าไปใน Scene</h1>
+      <p>Tutorial นี้สาธิตวิธีการ spawn objects ต่างๆ (หรือ prims) เข้าไปใน scene ใน Isaac Lab จาก Python โดยต่อยอดจาก tutorial ก่อนหน้าเรื่องการรัน simulator จาก standalone script และสาธิตวิธีการ spawn ground plane, lights, primitive shapes และ meshes จาก USD files</p>
+
+      <div class="callout callout-note">
+        <div class="callout-icon">📄</div>
+        <div>
+          <div class="callout-title">Code</div>
+          <p>tutorial นี้ตรงกับ script <code>spawn_prims.py</code> ในไดเรกทอรี <code>scripts/tutorials/00_sim</code></p>
+        </div>
+      </div>
+
+      <h2>อธิบาย Code</h2>
+      <p>การออกแบบ scene ใน Omniverse สร้างขึ้นรอบๆ ระบบซอฟต์แวร์และรูปแบบไฟล์ที่เรียกว่า <strong>USD (Universal Scene Description)</strong> ซึ่งช่วยให้สามารถอธิบาย 3D scenes ในลักษณะ hierarchical ได้ คล้ายกับ file system แนะนำให้อ่าน USD documentation เพื่อเรียนรู้เพิ่มเติม</p>
+
+      <p>แนวคิดสำคัญของ USD ที่ต้องรู้มีดังนี้:</p>
+      <ul>
+        <li><strong>Primitives (Prims)</strong>: คือ building blocks พื้นฐานของ USD scene คิดได้เหมือน nodes ใน scene graph แต่ละ node อาจเป็น mesh, light, camera หรือ transform และยังสามารถเป็น group ของ prims อื่นๆ ที่อยู่ภายใต้มันได้</li>
+        <li><strong>Attributes</strong>: คือ properties ของ prim คิดได้เหมือน key-value pairs เช่น prim อาจมี attribute ชื่อ color ที่มีค่าเป็น red</li>
+        <li><strong>Relationships</strong>: คือ connections ระหว่าง prims คิดได้เหมือน pointers ไปยัง prims อื่นๆ เช่น mesh prim อาจมี relationship ไปยัง material prim สำหรับ shading</li>
+      </ul>
+      <p>การรวมกันของ prims เหล่านี้พร้อมกับ attributes และ relationships เรียกว่า <strong>USD stage</strong> คิดได้เหมือน container สำหรับ prims ทั้งหมดใน scene Isaac Lab สร้างขึ้นบน USD APIs เพื่อให้มี configuration-driven interface สำหรับการ spawn prims เข้าไปใน scene ผ่าน <code>sim.spawners</code> module</p>
+
+      <pre data-lang="python"><code><span class="cm"># สร้าง configuration class instance</span>
+cfg = <span class="cls">MyPrimCfg</span>()
+prim_path = <span class="str">"/path/to/prim"</span>
+
+<span class="cm"># Spawn prim เข้าไปใน scene</span>
+<span class="fn">spawn_my_prim</span>(prim_path, cfg, translation=[<span class="num">0</span>, <span class="num">0</span>, <span class="num">0</span>], orientation=[<span class="num">1</span>, <span class="num">0</span>, <span class="num">0</span>, <span class="num">0</span>], scale=[<span class="num">1</span>, <span class="num">1</span>, <span class="num">1</span>])
+<span class="cm"># หรือ</span>
+cfg.<span class="fn">func</span>(prim_path, cfg, translation=[<span class="num">0</span>, <span class="num">0</span>, <span class="num">0</span>], orientation=[<span class="num">1</span>, <span class="num">0</span>, <span class="num">0</span>, <span class="num">0</span>], scale=[<span class="num">1</span>, <span class="num">1</span>, <span class="num">1</span>])</code></pre>
+
+      <div class="callout callout-warn">
+        <div class="callout-icon">⚠️</div>
+        <div>
+          <div class="callout-title">ข้อควรระวัง</div>
+          <p>การออกแบบ scene ทั้งหมดต้องเกิดขึ้นก่อนที่ simulation จะเริ่ม เมื่อ simulation เริ่มแล้ว แนะนำให้ scene อยู่นิ่งและแก้ไขแค่ properties ของ prim เท่านั้น ซึ่งสำคัญมากสำหรับ GPU simulation เพราะการเพิ่ม prims ระหว่าง simulation อาจทำให้ physics simulation buffers บน GPU เปลี่ยนแปลงและเกิดพฤติกรรมที่ไม่คาดคิด</p>
+        </div>
+      </div>
+
+      <h3>การ Spawn Ground Plane</h3>
+      <p><code>GroundPlaneCfg</code> กำหนดค่า ground plane แบบ grid ที่สามารถปรับแต่ง properties เช่น ลักษณะและขนาดได้</p>
+      <pre data-lang="python"><code><span class="cm"># Ground-plane</span>
+cfg_ground = sim_utils.<span class="cls">GroundPlaneCfg</span>()
+cfg_ground.<span class="fn">func</span>(<span class="str">"/World/defaultGroundPlane"</span>, cfg_ground)</code></pre>
+
+      <h3>การ Spawn Lights</h3>
+      <p>สามารถ spawn light prims ต่างๆ เข้าไปใน stage ได้ ได้แก่ distant lights, sphere lights, disk lights และ cylinder lights ใน tutorial นี้เรา spawn distant light ซึ่งเป็น light ที่อยู่ไกลอย่างอนันต์จาก scene และส่องในทิศทางเดียว</p>
+      <pre data-lang="python"><code><span class="cm"># spawn distant light</span>
+cfg_light_distant = sim_utils.<span class="cls">DistantLightCfg</span>(
+    intensity=<span class="num">3000.0</span>,
+    color=(<span class="num">0.75</span>, <span class="num">0.75</span>, <span class="num">0.75</span>),
+)
+cfg_light_distant.<span class="fn">func</span>(<span class="str">"/World/lightDistant"</span>, cfg_light_distant, translation=(<span class="num">1</span>, <span class="num">0</span>, <span class="num">10</span>))</code></pre>
+
+      <h3>การ Spawn Primitive Shapes</h3>
+      <p>ก่อน spawn primitive shapes เราแนะนำแนวคิดของ <strong>transform prim หรือ Xform</strong> ซึ่งเป็น prim ที่มีเฉพาะ transformation properties ใช้สำหรับ group prims อื่นๆ ไว้ภายใต้มันและ transform ทั้งหมดพร้อมกัน</p>
+      <pre data-lang="python"><code><span class="cm"># สร้าง xform prim ใหม่เพื่อ group objects ทั้งหมด</span>
+sim_utils.<span class="fn">create_prim</span>(<span class="str">"/World/Objects"</span>, <span class="str">"Xform"</span>)</code></pre>
+
+      <p>Cone1 และ Cone2 เป็น visual elements ไม่มี physics:</p>
+      <pre data-lang="python"><code><span class="cm"># spawn กรวยสีแดง</span>
+cfg_cone = sim_utils.<span class="cls">ConeCfg</span>(
+    radius=<span class="num">0.15</span>,
+    height=<span class="num">0.5</span>,
+    visual_material=sim_utils.<span class="cls">PreviewSurfaceCfg</span>(diffuse_color=(<span class="num">1.0</span>, <span class="num">0.0</span>, <span class="num">0.0</span>)),
+)
+cfg_cone.<span class="fn">func</span>(<span class="str">"/World/Objects/Cone1"</span>, cfg_cone, translation=(<span class="num">-1.0</span>, <span class="num">1.0</span>, <span class="num">1.0</span>))
+cfg_cone.<span class="fn">func</span>(<span class="str">"/World/Objects/Cone2"</span>, cfg_cone, translation=(<span class="num">-1.0</span>, <span class="num">-1.0</span>, <span class="num">1.0</span>))</code></pre>
+
+      <p>ConeRigid มี rigid body physics เพิ่มเข้ามา:</p>
+      <pre data-lang="python"><code><span class="cm"># spawn กรวยสีเขียวพร้อม colliders และ rigid body</span>
+cfg_cone_rigid = sim_utils.<span class="cls">ConeCfg</span>(
+    radius=<span class="num">0.15</span>,
+    height=<span class="num">0.5</span>,
+    rigid_props=sim_utils.<span class="cls">RigidBodyPropertiesCfg</span>(),
+    mass_props=sim_utils.<span class="cls">MassPropertiesCfg</span>(mass=<span class="num">1.0</span>),
+    collision_props=sim_utils.<span class="cls">CollisionPropertiesCfg</span>(),
+    visual_material=sim_utils.<span class="cls">PreviewSurfaceCfg</span>(diffuse_color=(<span class="num">0.0</span>, <span class="num">1.0</span>, <span class="num">0.0</span>)),
+)
+cfg_cone_rigid.<span class="fn">func</span>(
+    <span class="str">"/World/Objects/ConeRigid"</span>, cfg_cone_rigid,
+    translation=(<span class="num">-0.2</span>, <span class="num">0.0</span>, <span class="num">2.0</span>), orientation=(<span class="num">0.5</span>, <span class="num">0.0</span>, <span class="num">0.5</span>, <span class="num">0.0</span>)
+)</code></pre>
+
+      <p>CuboidDeformable มี deformable body physics ซึ่งต่างจาก rigid body ตรงที่ vertices สามารถขยับสัมพัทธ์กันได้ เหมาะสำหรับ simulate soft bodies เช่น ผ้า, ยาง หรือเยลลี่ โดย deformable bodies รองรับเฉพาะ GPU simulation เท่านั้น:</p>
+      <pre data-lang="python"><code><span class="cm"># spawn cuboid สีน้ำเงินพร้อม deformable body</span>
+cfg_cuboid_deformable = sim_utils.<span class="cls">MeshCuboidCfg</span>(
+    size=(<span class="num">0.2</span>, <span class="num">0.5</span>, <span class="num">0.2</span>),
+    deformable_props=sim_utils.<span class="cls">DeformableBodyPropertiesCfg</span>(),
+    visual_material=sim_utils.<span class="cls">PreviewSurfaceCfg</span>(diffuse_color=(<span class="num">0.0</span>, <span class="num">0.0</span>, <span class="num">1.0</span>)),
+    physics_material=sim_utils.<span class="cls">DeformableBodyMaterialCfg</span>(),
+)
+cfg_cuboid_deformable.<span class="fn">func</span>(<span class="str">"/World/Objects/CuboidDeformable"</span>, cfg_cuboid_deformable, translation=(<span class="num">0.15</span>, <span class="num">0.0</span>, <span class="num">2.0</span>))</code></pre>
+
+      <h3>การ Spawn จากไฟล์อื่น</h3>
+      <p>สามารถ spawn prims จากรูปแบบไฟล์อื่นๆ เช่น USD, URDF หรือ OBJ files ได้ ในที่นี้เรา spawn USD file ของโต๊ะเข้าไปใน scene</p>
+      <pre data-lang="python"><code><span class="cm"># spawn usd file ของโต๊ะเข้าไปใน scene</span>
+cfg = sim_utils.<span class="cls">UsdFileCfg</span>(usd_path=<span class="str">f"{ISAAC_NUCLEUS_DIR}/Props/Mounts/SeattleLabTable/table_instanceable.usd"</span>)
+cfg.<span class="fn">func</span>(<span class="str">"/World/Objects/Table"</span>, cfg, translation=(<span class="num">0.0</span>, <span class="num">0.0</span>, <span class="num">1.05</span>))</code></pre>
+
+      <p>โต๊ะถูกเพิ่มเข้าไปเป็น <strong>reference</strong> ใน scene หมายความว่าไม่ได้เพิ่มโต๊ะจริงๆ เข้าไปใน scene แต่เพิ่ม pointer ไปยัง table asset แทน ซึ่งช่วยให้สามารถแก้ไข table asset และมีการเปลี่ยนแปลงสะท้อนใน scene แบบ non-destructive เช่น เปลี่ยน material ของโต๊ะโดยไม่ต้องแก้ไขไฟล์ต้นฉบับโดยตรง โดยจะเก็บเฉพาะการเปลี่ยนแปลงไว้ใน USD stage</p>
+
+      <h2>การรัน Script</h2>
+      <div class="terminal">
+        <div class="terminal-bar">
+          <div class="terminal-dot"></div><div class="terminal-dot"></div><div class="terminal-dot"></div>
+          <span class="terminal-title">bash</span>
+        </div>
+        <pre><code><span class="prompt">$</span> ./isaaclab.sh -p scripts/tutorials/00_sim/spawn_prims.py</code></pre>
+      </div>
+      <p>เมื่อ simulation เริ่มขึ้น จะเห็นหน้าต่างที่มี ground plane, light, กรวยหลายอัน และโต๊ะ กรวยสีเขียวที่มี rigid body physics จะตกลงมาและชนกับโต๊ะและ ground plane ส่วนกรวยอื่นๆ เป็น visual elements จะไม่เคลื่อนที่ กด <code>Ctrl+C</code> เพื่อหยุด simulation</p>
+      <p>Tutorial นี้เป็นพื้นฐานสำหรับการ spawn prims ต่างๆ เข้าไปใน scene ใน Isaac Lab และสาธิต basic concepts ของการออกแบบ scene ใน tutorials ต่อไปเราจะดูวิธีการ interact กับ scene และ simulation</p>
+    </div>
+
+    <!-- ===== SECTION 3 ===== -->
+    <div class="tutorial-section" id="applaunch">
+      <div class="section-badge">Tutorial 03</div>
+      <h1>Deep-dive into AppLauncher</h1>
+      <p>ใน tutorial นี้ เราจะเจาะลึก class <code>app.AppLauncher</code> เพื่อกำหนดค่า simulator โดยใช้ CLI arguments และ environment variables (envars) โดยเฉพาะอย่างยิ่ง เราจะสาธิตวิธีใช้ AppLauncher เพื่อเปิดใช้งาน livestreaming และกำหนดค่า <code>isaacsim.simulation_app.SimulationApp</code> instance ที่มันครอบอยู่ พร้อมกับรองรับ options ที่ผู้ใช้กำหนดเองด้วย</p>
+      <p>AppLauncher เป็น wrapper สำหรับ SimulationApp เพื่อทำให้การกำหนดค่าง่ายขึ้น SimulationApp มี extensions หลายตัวที่ต้องโหลดเพื่อเปิดใช้งานความสามารถต่างๆ และ extensions บางตัวมีความสัมพันธ์ในด้านลำดับและการพึ่งพากัน นอกจากนี้ยังมี startup options เช่น headless ที่ต้องกำหนดตอน instantiation และมีความสัมพันธ์โดยนัยกับ extensions บางตัว เช่น livestreaming extensions AppLauncher นำเสนอ interface ที่จัดการ extensions และ startup options เหล่านี้ได้อย่างเหมาะสมในหลากหลาย use cases</p>
+
+      <div class="callout callout-note">
+        <div class="callout-icon">📄</div>
+        <div>
+          <div class="callout-title">Code</div>
+          <p>tutorial นี้ตรงกับ script <code>launch_app.py</code> ในไดเรกทอรี <code>scripts/tutorials/00_sim</code></p>
+        </div>
+      </div>
+
+      <h2>อธิบาย Code</h2>
+
+      <h3>การเพิ่ม Arguments เข้าไปใน Argparser</h3>
+      <p>AppLauncher ถูกออกแบบให้เข้ากันได้กับ custom CLI args ที่ผู้ใช้ต้องการสำหรับ scripts ของตัวเอง พร้อมทั้งยังให้ portable CLI interface อยู่</p>
+      <p>ใน tutorial นี้ <code>argparse.ArgumentParser</code> มาตรฐานถูก instantiate และได้รับ argument <code>--size</code> ที่เฉพาะสำหรับ script นี้ รวมถึง arguments <code>--height</code> และ <code>--width</code> ซึ่งถูกรับโดย SimulationApp</p>
+      <p>argument <code>--size</code> ไม่ได้ถูกใช้โดย AppLauncher แต่จะรวมเข้ากับ AppLauncher interface ได้อย่างราบรื่น arguments ภายใน script สามารถรวมกับ AppLauncher interface ผ่าน method <code>add_app_launcher_args()</code> ซึ่งจะ return ArgumentParser ที่แก้ไขแล้วพร้อม AppLauncher arguments ที่เพิ่มเข้ามา จากนั้นสามารถประมวลผลเป็น <code>argparse.Namespace</code> โดยใช้ method <code>argparse.ArgumentParser.parse_args()</code> มาตรฐาน และส่งไปยัง AppLauncher โดยตรงสำหรับการ instantiate</p>
+
+      <pre data-lang="python"><code><span class="kw">import</span> argparse
+<span class="kw">from</span> isaaclab.app <span class="kw">import</span> <span class="cls">AppLauncher</span>
+
+<span class="cm"># สร้าง argparser</span>
+parser = argparse.<span class="fn">ArgumentParser</span>(description=<span class="str">"Tutorial on running IsaacSim via the AppLauncher."</span>)
+parser.<span class="fn">add_argument</span>(<span class="str">"--size"</span>, type=<span class="cls">float</span>, default=<span class="num">1.0</span>, help=<span class="str">"Side-length of cuboid"</span>)
+<span class="cm"># SimulationApp arguments</span>
+parser.<span class="fn">add_argument</span>(
+    <span class="str">"--width"</span>, type=<span class="cls">int</span>, default=<span class="num">1280</span>, help=<span class="str">"Width of the viewport and generated images. Defaults to 1280"</span>
+)
+parser.<span class="fn">add_argument</span>(
+    <span class="str">"--height"</span>, type=<span class="cls">int</span>, default=<span class="num">720</span>, help=<span class="str">"Height of the viewport and generated images. Defaults to 720"</span>
+)
+
+<span class="cm"># เพิ่ม AppLauncher cli args</span>
+<span class="cls">AppLauncher</span>.<span class="fn">add_app_launcher_args</span>(parser)
+<span class="cm"># parse arguments</span>
+args_cli = parser.<span class="fn">parse_args</span>()
+<span class="cm"># เปิด omniverse app</span>
+app_launcher = <span class="cls">AppLauncher</span>(args_cli)
+simulation_app = app_launcher.app</code></pre>
+
+      <h3>การทำความเข้าใจ Output ของ --help</h3>
+      <p>เมื่อรัน script สามารถส่ง argument <code>--help</code> เพื่อดู combined outputs ของ custom arguments และ AppLauncher arguments ได้</p>
+
+      <div class="terminal">
+        <div class="terminal-bar">
+          <div class="terminal-dot"></div><div class="terminal-dot"></div><div class="terminal-dot"></div>
+          <span class="terminal-title">bash</span>
+        </div>
+        <pre><code><span class="prompt">$</span> ./isaaclab.sh -p scripts/tutorials/00_sim/launch_app.py --help
+
+[INFO] Using python from: /isaac-sim/python.sh
+[INFO][AppLauncher]: The argument 'width' will be used to configure the SimulationApp.
+[INFO][AppLauncher]: The argument 'height' will be used to configure the SimulationApp.
+usage: launch_app.py [-h] [--size SIZE] [--width WIDTH] [--height HEIGHT]
+                     [--headless] [--livestream {0,1,2}] ...
+
+options:
+  --size SIZE           Side-length of cuboid
+  --width WIDTH         Width of the viewport and generated images.
+  --height HEIGHT       Height of the viewport and generated images.
+
+app_launcher arguments:
+  --headless            Force display off at all times.
+  --livestream {0,1,2}  Force enable livestreaming.
+  --enable_cameras      Enable cameras when running without a GUI.
+  --verbose             Enable verbose terminal logging from the SimulationApp.
+  --experience EXPERIENCE</code></pre>
+      </div>
+
+      <p>ข้อความ <code>[INFO]</code> ก่อน help output แสดงให้เห็นว่า arguments ใดจะถูกตีความเป็น arguments สำหรับ SimulationApp instance ที่ AppLauncher ครอบอยู่ ในกรณีนี้คือ <code>--height</code> และ <code>--width</code></p>
+
+      <h3>การใช้ Environment Variables</h3>
+      <p>AppLauncher arguments (<code>--livestream</code>, <code>--headless</code>) มี environment variables (envar) ที่สอดคล้องกันด้วย การส่ง arguments เหล่านี้ผ่าน CLI เทียบเท่ากับการรัน script ในสภาพแวดล้อมที่ตั้งค่า envar ที่สอดคล้องกันไว้</p>
+      <p>การรองรับ AppLauncher envars เป็นเพียงความสะดวกสำหรับการ provide session-persistent configurations และสามารถตั้งค่าใน <code>${HOME}/.bashrc</code> สำหรับการตั้งค่าที่คงอยู่ระหว่าง sessions ในกรณีที่ arguments เหล่านี้ถูกส่งมาจาก CLI จะ override envar ที่สอดคล้องกัน</p>
+
+      <div class="callout callout-warn">
+        <div class="callout-icon">⚠️</div>
+        <div>
+          <div class="callout-title">ข้อยกเว้น</div>
+          <p><code>--enable_cameras</code> ตั้งค่า rendering pipeline ให้ใช้ offscreen renderer แต่ใช้งานได้เฉพาะกับ <code>isaaclab.sim.SimulationContext</code> เท่านั้น ไม่ใช้งานกับ <code>isaacsim.core.api.simulation_context.SimulationContext</code> ของ Isaac Sim</p>
+        </div>
+      </div>
+
+      <h2>การรัน Code</h2>
+      <p>รัน script พร้อม LIVESTREAM envar:</p>
+      <div class="terminal">
+        <div class="terminal-bar">
+          <div class="terminal-dot"></div><div class="terminal-dot"></div><div class="terminal-dot"></div>
+          <span class="terminal-title">bash</span>
+        </div>
+        <pre><code><span class="prompt">$</span> LIVESTREAM=2 ./isaaclab.sh -p scripts/tutorials/00_sim/launch_app.py --size 0.5</code></pre>
+      </div>
+      <p>จะ spawn cuboid ขนาด 0.5m³ ใน simulation โดยไม่มี GUI ปรากฏขึ้น เทียบเท่ากับการส่ง <code>--headless</code> flag เพราะ headlessness เป็นนัยจาก LIVESTREAM envar หากต้องการ visualization สามารถใช้ Isaac's WebRTC Livestreaming ได้ กด <code>Ctrl+C</code> เพื่อหยุด</p>
+
+      <p>ทดสอบ conflicting commands:</p>
+      <div class="terminal">
+        <div class="terminal-bar">
+          <div class="terminal-dot"></div><div class="terminal-dot"></div><div class="terminal-dot"></div>
+          <span class="terminal-title">bash</span>
+        </div>
+        <pre><code><span class="prompt">$</span> LIVESTREAM=0 ./isaaclab.sh -p scripts/tutorials/00_sim/launch_app.py --size 0.5 --livestream 2</code></pre>
+      </div>
+      <p>จะทำงานเหมือนกับการรันก่อนหน้า เพราะแม้ว่าเราตั้ง <code>LIVESTREAM=0</code> ใน envars แต่ CLI args เช่น <code>--livestream</code> มีความสำคัญกว่าในการกำหนดพฤติกรรม</p>
+
+      <p>ส่ง arguments ไปยัง SimulationApp ผ่าน AppLauncher:</p>
+      <div class="terminal">
+        <div class="terminal-bar">
+          <div class="terminal-dot"></div><div class="terminal-dot"></div><div class="terminal-dot"></div>
+          <span class="terminal-title">bash</span>
+        </div>
+        <pre><code><span class="prompt">$</span> LIVESTREAM=2 ./isaaclab.sh -p scripts/tutorials/00_sim/launch_app.py --size 0.5 --width 1920 --height 1080</code></pre>
+      </div>
+      <p>จะทำงานเหมือนเดิม แต่ตอนนี้ viewport จะถูก render ที่ความละเอียด 1920x1080p ซึ่งมีประโยชน์เมื่อต้องการเก็บวิดีโอความละเอียดสูง หรือสามารถระบุความละเอียดต่ำลงหากต้องการให้ simulation ทำงานได้ดีขึ้น กด <code>Ctrl+C</code> เพื่อหยุด</p>
+    </div>
+
+    <!-- ===== SECTION 4 ===== -->
+    <div class="tutorial-section" id="new-robot">
+      <div class="section-badge">Tutorial 04</div>
+      <h1>การเพิ่ม Robot ใหม่เข้าไปใน Isaac Lab</h1>
+      <p>การ simulate และ train robot ใหม่เป็นกระบวนการหลายขั้นตอนที่เริ่มต้นด้วยการ import robot เข้าไปใน Isaac Sim ซึ่งครอบคลุมอย่างละเอียดใน Isaac Sim documentation เมื่อ robot ถูก import และปรับแต่งสำหรับ simulation แล้ว เราต้องกำหนด interfaces ที่จำเป็นเพื่อ clone robot ข้าม multiple environments, ขับเคลื่อน joints และ reset อย่างถูกต้อง ไม่ว่าจะเลือก workflow หรือ training framework ใด</p>
+      <p>ใน tutorial นี้ เราจะดูวิธีการเพิ่ม robot ใหม่เข้าไปใน Isaac Lab ขั้นตอนสำคัญคือการสร้าง <code>AssetBaseCfg</code> ที่กำหนด interface ระหว่าง USD articulation ของ robot และ learning algorithms ที่มีใน Isaac Lab</p>
+
+      <div class="callout callout-note">
+        <div class="callout-icon">📄</div>
+        <div>
+          <div class="callout-title">Code</div>
+          <p>tutorial นี้ตรงกับ script <code>add_new_robot</code> ในไดเรกทอรี <code>scripts/tutorials/01_assets</code></p>
+        </div>
+      </div>
+
+      <h2>อธิบาย Code</h2>
+      <p>โดยพื้นฐานแล้ว robot คือ articulation ที่มี joint drives การเคลื่อนที่ robot ใน simulation ต้องใช้การ apply targets ไปยัง drives และ step simulation ไปข้างหน้า อย่างไรก็ตามการควบคุม robot ผ่าน joint drives โดยตรงนั้นยุ่งยาก โดยเฉพาะสำหรับ robot ที่ซับซ้อน และยิ่งยากขึ้นเมื่อต้องการ clone robot ข้าม multiple environments</p>
+      <p>เพื่อให้ง่ายขึ้น Isaac Lab มี collection ของ configuration classes ที่กำหนดว่าส่วนใดของ USD ที่ต้องการ clone, ส่วนใดเป็น actuators ที่ควบคุมโดย agent, วิธี reset เป็นต้น</p>
+      <p>tutorial script นี้ import robot 2 ตัว: <strong>Jetbot</strong> ซึ่งถูก configure แบบ minimal และ <strong>Dofbot</strong> ซึ่ง configure พร้อม parameters เพิ่มเติม</p>
+
+      <h3>Jetbot — การ Configure แบบ Minimal</h3>
+      <p>Jetbot เป็น robot ฐานล้อ 2 ล้อแบบ differential พร้อม camera ด้านบน เนื่องจากเป็น robot ที่ใช้ใน Isaac Sim demos หลายตัว เราจึงรู้ว่าพร้อมใช้งานได้ เราต้องกำหนด <code>ArticulationCfg</code> ที่อธิบาย robot ก่อน</p>
+
+      <pre data-lang="python"><code><span class="kw">import</span> isaaclab.sim <span class="kw">as</span> sim_utils
+<span class="kw">from</span> isaaclab.actuators <span class="kw">import</span> <span class="cls">ImplicitActuatorCfg</span>
+<span class="kw">from</span> isaaclab.assets <span class="kw">import</span> <span class="cls">AssetBaseCfg</span>
+<span class="kw">from</span> isaaclab.assets.articulation <span class="kw">import</span> <span class="cls">ArticulationCfg</span>
+<span class="kw">from</span> isaaclab.scene <span class="kw">import</span> <span class="cls">InteractiveScene</span>, <span class="cls">InteractiveSceneCfg</span>
+<span class="kw">from</span> isaaclab.utils.assets <span class="kw">import</span> ISAAC_NUCLEUS_DIR
+
+JETBOT_CONFIG = <span class="cls">ArticulationCfg</span>(
+    spawn=sim_utils.<span class="cls">UsdFileCfg</span>(usd_path=<span class="str">f"{ISAAC_NUCLEUS_DIR}/Robots/NVIDIA/Jetbot/jetbot.usd"</span>),
+    actuators={<span class="str">"wheel_acts"</span>: <span class="cls">ImplicitActuatorCfg</span>(joint_names_expr=[<span class="str">".*"</span>], damping=<span class="kw">None</span>, stiffness=<span class="kw">None</span>)},
+)</code></pre>
+
+      <p>นี่คือ configuration ขั้นต่ำสำหรับ robot ใน Isaac Lab โดยมี parameters ที่จำเป็นเพียง 2 ตัวคือ <code>spawn</code> และ <code>actuators</code></p>
+      <ul>
+        <li><strong>spawn</strong>: รับ <code>SpawnerCfg</code> เพื่อระบุ USD asset ที่กำหนด robot ใน sim โดยใช้ <code>UsdFileCfg</code> ที่รับ path ไปยัง USD asset</li>
+        <li><strong>actuators</strong>: เป็น dictionary ของ Actuator Configs กำหนดว่าส่วนใดของ robot ที่ agent จะควบคุม ในที่นี้ใช้ <code>ImplicitActuatorCfg</code> สำหรับล้อที่ใช้ค่า default</li>
+      </ul>
+      <p>การระบุ joint name keys สามารถใช้ regex <code>.*</code> เพื่อระบุ joints ทั้งหมดได้</p>
+
+      <div class="callout callout-note">
+        <div class="callout-icon">ℹ️</div>
+        <div>
+          <div class="callout-title">หมายเหตุ</div>
+          <p>ทั้ง <code>stiffness</code> และ <code>damping</code> ต้องระบุใน implicit actuator แต่ค่า <code>None</code> จะใช้ค่า default ที่กำหนดใน USD asset</p>
+        </div>
+      </div>
+
+      <h3>Dofbot — การ Configure พร้อม Parameters เพิ่มเติม</h3>
+      <p>Dofbot เป็น robot arm สำหรับ hobbyist ที่มีหลาย joints ทำให้มี options ในการ configure มากขึ้น ความแตกต่างหลัก 2 อย่างคือการเพิ่ม configurations สำหรับ physics properties และ initial state ของ robot</p>
+
+      <pre data-lang="python"><code>DOFBOT_CONFIG = <span class="cls">ArticulationCfg</span>(
+    spawn=sim_utils.<span class="cls">UsdFileCfg</span>(
+        usd_path=<span class="str">f"{ISAAC_NUCLEUS_DIR}/Robots/Yahboom/Dofbot/dofbot.usd"</span>,
+        rigid_props=sim_utils.<span class="cls">RigidBodyPropertiesCfg</span>(
+            disable_gravity=<span class="kw">False</span>,
+            max_depenetration_velocity=<span class="num">5.0</span>,
+        ),
+        articulation_props=sim_utils.<span class="cls">ArticulationRootPropertiesCfg</span>(
+            enabled_self_collisions=<span class="kw">True</span>,
+            solver_position_iteration_count=<span class="num">8</span>,
+            solver_velocity_iteration_count=<span class="num">0</span>
+        ),
+    ),
+    init_state=<span class="cls">ArticulationCfg</span>.<span class="cls">InitialStateCfg</span>(
+        joint_pos={
+            <span class="str">"joint1"</span>: <span class="num">0.0</span>,
+            <span class="str">"joint2"</span>: <span class="num">0.0</span>,
+            <span class="str">"joint3"</span>: <span class="num">0.0</span>,
+            <span class="str">"joint4"</span>: <span class="num">0.0</span>,
+        },
+        pos=(<span class="num">0.25</span>, <span class="num">-0.25</span>, <span class="num">0.0</span>),
+    ),
+    actuators={
+        <span class="str">"front_joints"</span>: <span class="cls">ImplicitActuatorCfg</span>(
+            joint_names_expr=[<span class="str">"joint[1-2]"</span>],
+            effort_limit_sim=<span class="num">100.0</span>,
+            velocity_limit_sim=<span class="num">100.0</span>,
+            stiffness=<span class="num">10000.0</span>,
+            damping=<span class="num">100.0</span>,
+        ),
+        <span class="str">"joint3_act"</span>: <span class="cls">ImplicitActuatorCfg</span>(
+            joint_names_expr=[<span class="str">"joint3"</span>],
+            effort_limit_sim=<span class="num">100.0</span>,
+            velocity_limit_sim=<span class="num">100.0</span>,
+            stiffness=<span class="num">10000.0</span>,
+            damping=<span class="num">100.0</span>,
+        ),
+        <span class="str">"joint4_act"</span>: <span class="cls">ImplicitActuatorCfg</span>(
+            joint_names_expr=[<span class="str">"joint4"</span>],
+            effort_limit_sim=<span class="num">100.0</span>,
+            velocity_limit_sim=<span class="num">100.0</span>,
+            stiffness=<span class="num">10000.0</span>,
+            damping=<span class="num">100.0</span>,
+        ),
+    },
+)</code></pre>
+
+      <p>Parameters สำคัญที่เพิ่มขึ้นมา:</p>
+      <ul>
+        <li><strong>rigid_props</strong>: รับ <code>RigidBodyPropertiesCfg</code> เพื่อระบุ body link properties ของ robot ที่เกี่ยวกับพฤติกรรมในฐานะ "physical object" ใน simulation</li>
+        <li><strong>articulation_props</strong>: กำหนด properties ของ solver ที่ใช้ step joints ไปตามเวลา รับ <code>ArticulationRootPropertiesCfg</code></li>
+        <li><strong>init_state</strong>: กำหนด initial state ของ articulation ที่ใช้เมื่อ robot ถูก spawn หรือ reset โดย Isaac Lab โดย <code>joint_pos</code> ใช้ USD joint names เป็น keys และ <code>pos</code> เป็น coordinate ของ environment ไม่ใช่ world</li>
+      </ul>
+
+      <h3>การเพิ่ม Robots เข้าไปใน Scene</h3>
+      <p>เมื่อมี configurations แล้ว สามารถเพิ่ม robots เข้าไปใน scene ได้โดยกำหนด <code>InteractiveSceneCfg</code></p>
+
+      <pre data-lang="python"><code><span class="kw">class</span> <span class="cls">NewRobotsSceneCfg</span>(<span class="cls">InteractiveSceneCfg</span>):
+    <span class="str">"""Designs the scene."""</span>
+
+    <span class="cm"># Ground-plane</span>
+    ground = <span class="cls">AssetBaseCfg</span>(prim_path=<span class="str">"/World/defaultGroundPlane"</span>, spawn=sim_utils.<span class="cls">GroundPlaneCfg</span>())
+
+    <span class="cm"># lights</span>
+    dome_light = <span class="cls">AssetBaseCfg</span>(
+        prim_path=<span class="str">"/World/Light"</span>,
+        spawn=sim_utils.<span class="cls">DomeLightCfg</span>(intensity=<span class="num">3000.0</span>, color=(<span class="num">0.75</span>, <span class="num">0.75</span>, <span class="num">0.75</span>))
+    )
+
+    <span class="cm"># robot</span>
+    Jetbot = JETBOT_CONFIG.<span class="fn">replace</span>(prim_path=<span class="str">"{ENV_REGEX_NS}/Jetbot"</span>)
+    Dofbot = DOFBOT_CONFIG.<span class="fn">replace</span>(prim_path=<span class="str">"{ENV_REGEX_NS}/Dofbot"</span>)</code></pre>
+
+      <h3>การรัน Simulation Loop</h3>
+      <pre data-lang="python"><code><span class="kw">def</span> <span class="fn">run_simulator</span>(sim: sim_utils.<span class="cls">SimulationContext</span>, scene: <span class="cls">InteractiveScene</span>):
+    sim_dt = sim.<span class="fn">get_physics_dt</span>()
+    sim_time = <span class="num">0.0</span>
+    count = <span class="num">0</span>
+
+    <span class="kw">while</span> simulation_app.<span class="fn">is_running</span>():
+        <span class="cm"># reset ทุก 500 steps</span>
+        <span class="kw">if</span> count % <span class="num">500</span> == <span class="num">0</span>:
+            count = <span class="num">0</span>
+            root_jetbot_state = scene[<span class="str">"Jetbot"</span>].data.default_root_state.<span class="fn">clone</span>()
+            root_jetbot_state[:, :<span class="num">3</span>] += scene.env_origins
+            root_dofbot_state = scene[<span class="str">"Dofbot"</span>].data.default_root_state.<span class="fn">clone</span>()
+            root_dofbot_state[:, :<span class="num">3</span>] += scene.env_origins
+
+            scene[<span class="str">"Jetbot"</span>].<span class="fn">write_root_pose_to_sim</span>(root_jetbot_state[:, :<span class="num">7</span>])
+            scene[<span class="str">"Jetbot"</span>].<span class="fn">write_root_velocity_to_sim</span>(root_jetbot_state[:, <span class="num">7</span>:])
+            scene[<span class="str">"Dofbot"</span>].<span class="fn">write_root_pose_to_sim</span>(root_dofbot_state[:, :<span class="num">7</span>])
+            scene[<span class="str">"Dofbot"</span>].<span class="fn">write_root_velocity_to_sim</span>(root_dofbot_state[:, <span class="num">7</span>:])
+
+            joint_pos, joint_vel = (
+                scene[<span class="str">"Jetbot"</span>].data.default_joint_pos.<span class="fn">clone</span>(),
+                scene[<span class="str">"Jetbot"</span>].data.default_joint_vel.<span class="fn">clone</span>(),
+            )
+            scene[<span class="str">"Jetbot"</span>].<span class="fn">write_joint_state_to_sim</span>(joint_pos, joint_vel)
+            joint_pos, joint_vel = (
+                scene[<span class="str">"Dofbot"</span>].data.default_joint_pos.<span class="fn">clone</span>(),
+                scene[<span class="str">"Dofbot"</span>].data.default_joint_vel.<span class="fn">clone</span>(),
+            )
+            scene[<span class="str">"Dofbot"</span>].<span class="fn">write_joint_state_to_sim</span>(joint_pos, joint_vel)
+            scene.<span class="fn">reset</span>()
+            <span class="fn">print</span>(<span class="str">"[INFO]: Resetting Jetbot and Dofbot state..."</span>)
+
+        <span class="cm"># ขับ Jetbot</span>
+        <span class="kw">if</span> count % <span class="num">100</span> &lt; <span class="num">75</span>:
+            action = torch.<span class="cls">Tensor</span>([[<span class="num">10.0</span>, <span class="num">10.0</span>]])  <span class="cm"># ตรง</span>
+        <span class="kw">else</span>:
+            action = torch.<span class="cls">Tensor</span>([[<span class="num">5.0</span>, <span class="num">-5.0</span>]])   <span class="cm"># เลี้ยว</span>
+
+        scene[<span class="str">"Jetbot"</span>].<span class="fn">set_joint_velocity_target</span>(action)
+
+        <span class="cm"># โบก Dofbot</span>
+        wave_action = scene[<span class="str">"Dofbot"</span>].data.default_joint_pos
+        wave_action[:, <span class="num">0</span>:<span class="num">4</span>] = <span class="num">0.25</span> * np.<span class="fn">sin</span>(<span class="num">2</span> * np.pi * <span class="num">0.5</span> * sim_time)
+        scene[<span class="str">"Dofbot"</span>].<span class="fn">set_joint_position_target</span>(wave_action)
+
+        scene.<span class="fn">write_data_to_sim</span>()
+        sim.<span class="fn">step</span>()
+        sim_time += sim_dt
+        count += <span class="num">1</span>
+        scene.<span class="fn">update</span>(sim_dt)</code></pre>
+
+      <div class="callout callout-note">
+        <div class="callout-icon">ℹ️</div>
+        <div>
+          <div class="callout-title">หมายเหตุ</div>
+          <p>อาจเห็น warning ว่าไม่ได้ configure actuators ทั้งหมด ซึ่งเป็นเรื่องปกติเพราะ tutorial นี้ไม่ได้จัดการ gripper ของ Dofbot</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // Active nav highlight
+  const sections = document.querySelectorAll('.tutorial-section');
+  const navItems = document.querySelectorAll('.nav-item');
+
+  window.addEventListener('scroll', () => {
+    let current = '';
+    sections.forEach(s => {
+      if (window.scrollY >= s.offsetTop - 120) current = s.id;
+    });
+    navItems.forEach(n => {
+      n.classList.remove('active');
+      if (n.getAttribute('href') === '#' + current) n.classList.add('active');
+    });
+  });
+</script>
+</body>
+</html>
