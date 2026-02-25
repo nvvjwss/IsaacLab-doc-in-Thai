@@ -255,6 +255,7 @@ cfg.<span class="fn">func</span>(<span class="str">"/World/Objects/Table"</span>
         <pre><code><span class="prompt">$</span> ./isaaclab.sh -p scripts/tutorials/00_sim/spawn_prims.py</code></pre>
       </div>
       <p>เมื่อ simulation เริ่มขึ้น จะเห็นหน้าต่างที่มี ground plane, light, กรวยหลายอัน และโต๊ะ กรวยสีเขียวที่มี rigid body physics จะตกลงมาและชนกับโต๊ะและ ground plane ส่วนกรวยอื่นๆ เป็น visual elements จะไม่เคลื่อนที่ กด <code>Ctrl+C</code> เพื่อหยุด simulation</p>
+      <img src="../assets/images/tutorial_spawn_prims.jpg" alt="Tutorial Spawn Prims" style="width:100%; border-radius:6px; margin: 16px 0;">
       <p>Tutorial นี้เป็นพื้นฐานสำหรับการ spawn prims ต่างๆ เข้าไปใน scene ใน Isaac Lab และสาธิต basic concepts ของการออกแบบ scene ใน tutorials ต่อไปเราจะดูวิธีการ interact กับ scene และ simulation</p>
     </div>
 
@@ -355,7 +356,7 @@ app_launcher arguments:
         <pre><code><span class="prompt">$</span> LIVESTREAM=2 ./isaaclab.sh -p scripts/tutorials/00_sim/launch_app.py --size 0.5</code></pre>
       </div>
       <p>จะ spawn cuboid ขนาด 0.5m³ ใน simulation โดยไม่มี GUI ปรากฏขึ้น เทียบเท่ากับการส่ง <code>--headless</code> flag เพราะ headlessness เป็นนัยจาก LIVESTREAM envar หากต้องการ visualization สามารถใช้ Isaac's WebRTC Livestreaming ได้ กด <code>Ctrl+C</code> เพื่อหยุด</p>
-
+      <img src="../assets/images/tutorial_launch_app.jpg" alt="Tutorial Spawn Prims" style="width:100%; border-radius:6px; margin: 16px 0;">
       <p>ทดสอบ conflicting commands:</p>
       <div class="terminal">
         <div class="terminal-bar">
@@ -562,6 +563,7 @@ JETBOT_CONFIG = <span class="cls">ArticulationCfg</span>(
           <p>อาจเห็น warning ว่าไม่ได้ configure actuators ทั้งหมด ซึ่งเป็นเรื่องปกติเพราะ tutorial นี้ไม่ได้จัดการ gripper ของ Dofbot</p>
         </div>
       </div>
+      <img src="../assets/images/tutorial_add_new_robot_result.jpg" alt="Tutorial Spawn Prims" style="width:100%; border-radius:6px; margin: 16px 0;">
     </div>
 
   </div>
