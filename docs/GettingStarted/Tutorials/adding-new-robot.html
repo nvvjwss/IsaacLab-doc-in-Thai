@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>การเพิ่ม Robot ใหม่ — IsaacLab Docs (TH)</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans+Thai:wght@300;400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../../css/main.css">
+  <link rel="stylesheet" href="../../../css/docs.css">
+  <script src="../../../js/main.js" defer></script>
+</head>
+<body>
+
+<!-- Sidebar -->
+<div id="sidebar-container"></div>
+
+<!-- Main -->
+<div class="main">
+  <div class="topbar">
+  <button class="hamburger" onclick="openSidebar()">☰</button>
+    <div class="breadcrumb">
+      <span>Isaac Lab</span>
+      <span class="sep">›</span>
+      <span>Tutorials</span>
+      <span class="sep">›</span>
+      <span>01_assets</span>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <div class="tutorial-section" id="new-robot">
+      <div class="section-badge">Tutorial 04</div>
+      <h1>การเพิ่ม Robot ใหม่เข้าไปใน Isaac Lab</h1>
+      <p>การ simulate และ train robot ใหม่เป็นกระบวนการหลายขั้นตอนที่เริ่มต้นด้วยการ import robot เข้าไปใน Isaac Sim ซึ่งครอบคลุมอย่างละเอียดใน Isaac Sim documentation เมื่อ robot ถูก import และปรับแต่งสำหรับ simulation แล้ว เราต้องกำหนด interfaces ที่จำเป็นเพื่อ clone robot ข้าม multiple environments, ขับเคลื่อน joints และ reset อย่างถูกต้อง ไม่ว่าจะเลือก workflow หรือ training framework ใด</p>
+      <p>ใน tutorial นี้ เราจะดูวิธีการเพิ่ม robot ใหม่เข้าไปใน Isaac Lab ขั้นตอนสำคัญคือการสร้าง <code>AssetBaseCfg</code> ที่กำหนด interface ระหว่าง USD articulation ของ robot และ learning algorithms ที่มีใน Isaac Lab</p>
+
+      <div class="callout callout-note">
+        <div class="callout-icon">📄</div>
+        <div>
+          <div class="callout-title">Code</div>
+          <p>tutorial นี้ตรงกับ script <code>add_new_robot</code> ในไดเรกทอรี <code>scripts/tutorials/01_assets</code></p>
+        </div>
+      </div>
+
+      <h2>อธิบาย Code</h2>
+      <p>โดยพื้นฐานแล้ว robot คือ articulation ที่มี joint drives การเคลื่อนที่ robot ใน simulation ต้องใช้การ apply targets ไปยัง drives และ step simulation ไปข้างหน้า อย่างไรก็ตามการควบคุม robot ผ่าน joint drives โดยตรงนั้นยุ่งยาก โดยเฉพาะสำหรับ robot ที่ซับซ้อน และยิ่งยากขึ้นเมื่อต้องการ clone robot ข้าม multiple environments</p>
+      <p>เพื่อให้ง่ายขึ้น Isaac Lab มี collection ของ configuration classes ที่กำหนดว่าส่วนใดของ USD ที่ต้องการ clone, ส่วนใดเป็น actuators ที่ควบคุมโดย agent, วิธี reset เป็นต้น</p>
+      <p>tutorial script นี้ import robot 2 ตัว: <strong>Jetbot</strong> ซึ่งถูก configure แบบ minimal และ <strong>Dofbot</strong> ซึ่ง configure พร้อม parameters เพิ่มเติม</p>
+
+      <h3>Jetbot — การ Configure แบบ Minimal</h3>
+      <p>Jetbot เป็น robot ฐานล้อ 2 ล้อแบบ differential พร้อม camera ด้านบน เนื่องจากเป็น robot ที่ใช้ใน Isaac Sim demos หลายตัว เราจึงรู้ว่าพร้อมใช้งานได้ เราต้องกำหนด <code>ArticulationCfg</code> ที่อธิบาย robot ก่อน</p>
+
+      <pre data-lang="python"><code><span class="kw">import</span> isaaclab.sim <span class="kw">as</span> sim_utils
+<span class="kw">from</span> isaaclab.actuators <span class="kw">import</span> <span class="cls">ImplicitActuatorCfg</span>
+<span class="kw">from</span> isaaclab.assets <span class="kw">import</span> <span class="cls">AssetBaseCfg</span>
+<span class="kw">from</span> isaaclab.assets.articulation <span class="kw">import</span> <span class="cls">ArticulationCfg</span>
+<span class="kw">from</span> isaaclab.scene <span class="kw">import</span> <span class="cls">InteractiveScene</span>, <span class="cls">InteractiveSceneCfg</span>
+<span class="kw">from</span> isaaclab.utils.assets <span class="kw">import</span> ISAAC_NUCLEUS_DIR
+
+JETBOT_CONFIG = <span class="cls">ArticulationCfg</span>(
+    spawn=sim_utils.<span class="cls">UsdFileCfg</span>(usd_path=<span class="str">f"{ISAAC_NUCLEUS_DIR}/Robots/NVIDIA/Jetbot/jetbot.usd"</span>),
+    actuators={<span class="str">"wheel_acts"</span>: <span class="cls">ImplicitActuatorCfg</span>(joint_names_expr=[<span class="str">".*"</span>], damping=<span class="kw">None</span>, stiffness=<span class="kw">None</span>)},
+)</code></pre>
+
+      <p>นี่คือ configuration ขั้นต่ำสำหรับ robot ใน Isaac Lab โดยมี parameters ที่จำเป็นเพียง 2 ตัวคือ <code>spawn</code> และ <code>actuators</code></p>
+      <ul>
+        <li><strong>spawn</strong>: รับ <code>SpawnerCfg</code> เพื่อระบุ USD asset ที่กำหนด robot ใน sim โดยใช้ <code>UsdFileCfg</code> ที่รับ path ไปยัง USD asset</li>
+        <li><strong>actuators</strong>: เป็น dictionary ของ Actuator Configs กำหนดว่าส่วนใดของ robot ที่ agent จะควบคุม ในที่นี้ใช้ <code>ImplicitActuatorCfg</code> สำหรับล้อที่ใช้ค่า default</li>
+      </ul>
+      <p>การระบุ joint name keys สามารถใช้ regex <code>.*</code> เพื่อระบุ joints ทั้งหมดได้</p>
+
+      <div class="callout callout-note">
+        <div class="callout-icon">ℹ️</div>
+        <div>
+          <div class="callout-title">หมายเหตุ</div>
+          <p>ทั้ง <code>stiffness</code> และ <code>damping</code> ต้องระบุใน implicit actuator แต่ค่า <code>None</code> จะใช้ค่า default ที่กำหนดใน USD asset</p>
+        </div>
+      </div>
+
+      <h3>Dofbot — การ Configure พร้อม Parameters เพิ่มเติม</h3>
+      <p>Dofbot เป็น robot arm สำหรับ hobbyist ที่มีหลาย joints ทำให้มี options ในการ configure มากขึ้น ความแตกต่างหลัก 2 อย่างคือการเพิ่ม configurations สำหรับ physics properties และ initial state ของ robot</p>
+
+      <pre data-lang="python"><code>DOFBOT_CONFIG = <span class="cls">ArticulationCfg</span>(
+    spawn=sim_utils.<span class="cls">UsdFileCfg</span>(
+        usd_path=<span class="str">f"{ISAAC_NUCLEUS_DIR}/Robots/Yahboom/Dofbot/dofbot.usd"</span>,
+        rigid_props=sim_utils.<span class="cls">RigidBodyPropertiesCfg</span>(
+            disable_gravity=<span class="kw">False</span>,
+            max_depenetration_velocity=<span class="num">5.0</span>,
+        ),
+        articulation_props=sim_utils.<span class="cls">ArticulationRootPropertiesCfg</span>(
+            enabled_self_collisions=<span class="kw">True</span>,
+            solver_position_iteration_count=<span class="num">8</span>,
+            solver_velocity_iteration_count=<span class="num">0</span>
+        ),
+    ),
+    init_state=<span class="cls">ArticulationCfg</span>.<span class="cls">InitialStateCfg</span>(
+        joint_pos={
+            <span class="str">"joint1"</span>: <span class="num">0.0</span>,
+            <span class="str">"joint2"</span>: <span class="num">0.0</span>,
+            <span class="str">"joint3"</span>: <span class="num">0.0</span>,
+            <span class="str">"joint4"</span>: <span class="num">0.0</span>,
+        },
+        pos=(<span class="num">0.25</span>, <span class="num">-0.25</span>, <span class="num">0.0</span>),
+    ),
+    actuators={
+        <span class="str">"front_joints"</span>: <span class="cls">ImplicitActuatorCfg</span>(
+            joint_names_expr=[<span class="str">"joint[1-2]"</span>],
+            effort_limit_sim=<span class="num">100.0</span>,
+            velocity_limit_sim=<span class="num">100.0</span>,
+            stiffness=<span class="num">10000.0</span>,
+            damping=<span class="num">100.0</span>,
+        ),
+        <span class="str">"joint3_act"</span>: <span class="cls">ImplicitActuatorCfg</span>(
+            joint_names_expr=[<span class="str">"joint3"</span>],
+            effort_limit_sim=<span class="num">100.0</span>,
+            velocity_limit_sim=<span class="num">100.0</span>,
+            stiffness=<span class="num">10000.0</span>,
+            damping=<span class="num">100.0</span>,
+        ),
+        <span class="str">"joint4_act"</span>: <span class="cls">ImplicitActuatorCfg</span>(
+            joint_names_expr=[<span class="str">"joint4"</span>],
+            effort_limit_sim=<span class="num">100.0</span>,
+            velocity_limit_sim=<span class="num">100.0</span>,
+            stiffness=<span class="num">10000.0</span>,
+            damping=<span class="num">100.0</span>,
+        ),
+    },
+)</code></pre>
+
+      <p>Parameters สำคัญที่เพิ่มขึ้นมา:</p>
+      <ul>
+        <li><strong>rigid_props</strong>: รับ <code>RigidBodyPropertiesCfg</code> เพื่อระบุ body link properties ของ robot ที่เกี่ยวกับพฤติกรรมในฐานะ "physical object" ใน simulation</li>
+        <li><strong>articulation_props</strong>: กำหนด properties ของ solver ที่ใช้ step joints ไปตามเวลา รับ <code>ArticulationRootPropertiesCfg</code></li>
+        <li><strong>init_state</strong>: กำหนด initial state ของ articulation ที่ใช้เมื่อ robot ถูก spawn หรือ reset โดย Isaac Lab โดย <code>joint_pos</code> ใช้ USD joint names เป็น keys และ <code>pos</code> เป็น coordinate ของ environment ไม่ใช่ world</li>
+      </ul>
+
+      <h3>การเพิ่ม Robots เข้าไปใน Scene</h3>
+      <p>เมื่อมี configurations แล้ว สามารถเพิ่ม robots เข้าไปใน scene ได้โดยกำหนด <code>InteractiveSceneCfg</code></p>
+
+      <pre data-lang="python"><code><span class="kw">class</span> <span class="cls">NewRobotsSceneCfg</span>(<span class="cls">InteractiveSceneCfg</span>):
+    <span class="str">"""Designs the scene."""</span>
+
+    <span class="cm"># Ground-plane</span>
+    ground = <span class="cls">AssetBaseCfg</span>(prim_path=<span class="str">"/World/defaultGroundPlane"</span>, spawn=sim_utils.<span class="cls">GroundPlaneCfg</span>())
+
+    <span class="cm"># lights</span>
+    dome_light = <span class="cls">AssetBaseCfg</span>(
+        prim_path=<span class="str">"/World/Light"</span>,
+        spawn=sim_utils.<span class="cls">DomeLightCfg</span>(intensity=<span class="num">3000.0</span>, color=(<span class="num">0.75</span>, <span class="num">0.75</span>, <span class="num">0.75</span>))
+    )
+
+    <span class="cm"># robot</span>
+    Jetbot = JETBOT_CONFIG.<span class="fn">replace</span>(prim_path=<span class="str">"{ENV_REGEX_NS}/Jetbot"</span>)
+    Dofbot = DOFBOT_CONFIG.<span class="fn">replace</span>(prim_path=<span class="str">"{ENV_REGEX_NS}/Dofbot"</span>)</code></pre>
+
+      <h3>การรัน Simulation Loop</h3>
+      <pre data-lang="python"><code><span class="kw">def</span> <span class="fn">run_simulator</span>(sim: sim_utils.<span class="cls">SimulationContext</span>, scene: <span class="cls">InteractiveScene</span>):
+    sim_dt = sim.<span class="fn">get_physics_dt</span>()
+    sim_time = <span class="num">0.0</span>
+    count = <span class="num">0</span>
+
+    <span class="kw">while</span> simulation_app.<span class="fn">is_running</span>():
+        <span class="cm"># reset ทุก 500 steps</span>
+        <span class="kw">if</span> count % <span class="num">500</span> == <span class="num">0</span>:
+            count = <span class="num">0</span>
+            root_jetbot_state = scene[<span class="str">"Jetbot"</span>].data.default_root_state.<span class="fn">clone</span>()
+            root_jetbot_state[:, :<span class="num">3</span>] += scene.env_origins
+            root_dofbot_state = scene[<span class="str">"Dofbot"</span>].data.default_root_state.<span class="fn">clone</span>()
+            root_dofbot_state[:, :<span class="num">3</span>] += scene.env_origins
+
+            scene[<span class="str">"Jetbot"</span>].<span class="fn">write_root_pose_to_sim</span>(root_jetbot_state[:, :<span class="num">7</span>])
+            scene[<span class="str">"Jetbot"</span>].<span class="fn">write_root_velocity_to_sim</span>(root_jetbot_state[:, <span class="num">7</span>:])
+            scene[<span class="str">"Dofbot"</span>].<span class="fn">write_root_pose_to_sim</span>(root_dofbot_state[:, :<span class="num">7</span>])
+            scene[<span class="str">"Dofbot"</span>].<span class="fn">write_root_velocity_to_sim</span>(root_dofbot_state[:, <span class="num">7</span>:])
+
+            joint_pos, joint_vel = (
+                scene[<span class="str">"Jetbot"</span>].data.default_joint_pos.<span class="fn">clone</span>(),
+                scene[<span class="str">"Jetbot"</span>].data.default_joint_vel.<span class="fn">clone</span>(),
+            )
+            scene[<span class="str">"Jetbot"</span>].<span class="fn">write_joint_state_to_sim</span>(joint_pos, joint_vel)
+            joint_pos, joint_vel = (
+                scene[<span class="str">"Dofbot"</span>].data.default_joint_pos.<span class="fn">clone</span>(),
+                scene[<span class="str">"Dofbot"</span>].data.default_joint_vel.<span class="fn">clone</span>(),
+            )
+            scene[<span class="str">"Dofbot"</span>].<span class="fn">write_joint_state_to_sim</span>(joint_pos, joint_vel)
+            scene.<span class="fn">reset</span>()
+            <span class="fn">print</span>(<span class="str">"[INFO]: Resetting Jetbot and Dofbot state..."</span>)
+
+        <span class="cm"># ขับ Jetbot</span>
+        <span class="kw">if</span> count % <span class="num">100</span> &lt; <span class="num">75</span>:
+            action = torch.<span class="cls">Tensor</span>([[<span class="num">10.0</span>, <span class="num">10.0</span>]])  <span class="cm"># ตรง</span>
+        <span class="kw">else</span>:
+            action = torch.<span class="cls">Tensor</span>([[<span class="num">5.0</span>, <span class="num">-5.0</span>]])   <span class="cm"># เลี้ยว</span>
+
+        scene[<span class="str">"Jetbot"</span>].<span class="fn">set_joint_velocity_target</span>(action)
+
+        <span class="cm"># โบก Dofbot</span>
+        wave_action = scene[<span class="str">"Dofbot"</span>].data.default_joint_pos
+        wave_action[:, <span class="num">0</span>:<span class="num">4</span>] = <span class="num">0.25</span> * np.<span class="fn">sin</span>(<span class="num">2</span> * np.pi * <span class="num">0.5</span> * sim_time)
+        scene[<span class="str">"Dofbot"</span>].<span class="fn">set_joint_position_target</span>(wave_action)
+
+        scene.<span class="fn">write_data_to_sim</span>()
+        sim.<span class="fn">step</span>()
+        sim_time += sim_dt
+        count += <span class="num">1</span>
+        scene.<span class="fn">update</span>(sim_dt)</code></pre>
+
+      <div class="callout callout-note">
+        <div class="callout-icon">ℹ️</div>
+        <div>
+          <div class="callout-title">หมายเหตุ</div>
+          <p>อาจเห็น warning ว่าไม่ได้ configure actuators ทั้งหมด ซึ่งเป็นเรื่องปกติเพราะ tutorial นี้ไม่ได้จัดการ gripper ของ Dofbot</p>
+        </div>
+      </div>
+      <img src="../../../assets/images/tutorial_add_new_robot_result.jpg" alt="Tutorial Add New Robot" style="width:100%; border-radius:6px; margin: 16px 0;">
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>

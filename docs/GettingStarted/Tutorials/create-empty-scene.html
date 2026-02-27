@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>การสร้าง Empty Scene — IsaacLab Docs (TH)</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans+Thai:wght@300;400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../../css/main.css">
+  <link rel="stylesheet" href="../../../css/docs.css">
+  <script src="../../../js/main.js" defer></script>
+</head>
+<body>
+
+<!-- Sidebar -->
+<div id="sidebar-container"></div>
+
+<!-- Main -->
+<div class="main">
+  <div class="topbar">
+  <button class="hamburger" onclick="openSidebar()">☰</button>
+    <div class="breadcrumb">
+      <span>Isaac Lab</span>
+      <span class="sep">›</span>
+      <span>Tutorials</span>
+      <span class="sep">›</span>
+      <span>00_sim</span>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <div class="tutorial-section" id="create-empty">
+      <div class="section-badge">Tutorial 01</div>
+      <h1>การสร้าง Empty Scene</h1>
+      <p>Tutorial นี้สาธิตวิธีการเปิดและควบคุม Isaac Sim simulator จาก standalone Python script โดยตั้งค่า empty scene ใน Isaac Lab และแนะนำ 2 classes หลักที่ใช้ใน framework ได้แก่ <code>app.AppLauncher</code> และ <code>sim.SimulationContext</code></p>
+      <p>กรุณาอ่าน Isaac Sim Workflows ก่อนเริ่ม tutorial นี้เพื่อทำความเข้าใจเบื้องต้นเกี่ยวกับการทำงานกับ simulator</p>
+
+      <div class="callout callout-note">
+        <div class="callout-icon">📄</div>
+        <div>
+          <div class="callout-title">Code</div>
+          <p>tutorial นี้ตรงกับ script <code>create_empty.py</code> ในไดเรกทอรี <code>scripts/tutorials/00_sim</code></p>
+        </div>
+      </div>
+
+      <h2>อธิบาย Code</h2>
+
+      <h3>การเปิด Simulator</h3>
+      <p>ขั้นตอนแรกเมื่อทำงานกับ standalone Python scripts คือการเปิด simulation application ซึ่งจำเป็นต้องทำตั้งแต่ต้น เนื่องจาก dependency modules ต่างๆ ของ Isaac Sim จะพร้อมใช้งานหลังจาก simulation app ทำงานแล้วเท่านั้น</p>
+      <p>ทำได้โดย import class <code>app.AppLauncher</code> ซึ่งเป็น utility class ที่ wrap รอบ <code>isaacsim.SimulationApp</code> class เพื่อเปิด simulator และมีกลไกในการกำหนดค่า simulator ผ่าน command-line arguments และ environment variables</p>
+      <p>สำหรับ tutorial นี้ เราดูการเพิ่ม command-line options เข้าไปใน <code>argparse.ArgumentParser</code> ที่ผู้ใช้กำหนดเอง โดยส่ง parser instance ไปยัง method <code>app.AppLauncher.add_app_launcher_args()</code> ซึ่งจะเพิ่ม parameters ต่างๆ เข้าไป เช่น การเปิด app แบบ headless, การกำหนดค่า Livestream options และการเปิดใช้งาน off-screen rendering</p>
+
+      <pre data-lang="python"><code><span class="kw">import</span> argparse
+<span class="kw">from</span> isaaclab.app <span class="kw">import</span> <span class="cls">AppLauncher</span>
+
+<span class="cm"># สร้าง argparser</span>
+parser = argparse.<span class="fn">ArgumentParser</span>(description=<span class="str">"Tutorial on creating an empty stage."</span>)
+<span class="cm"># เพิ่ม AppLauncher cli args</span>
+<span class="cls">AppLauncher</span>.<span class="fn">add_app_launcher_args</span>(parser)
+<span class="cm"># parse arguments</span>
+args_cli = parser.<span class="fn">parse_args</span>()
+<span class="cm"># เปิด omniverse app</span>
+app_launcher = <span class="cls">AppLauncher</span>(args_cli)
+simulation_app = app_launcher.app</code></pre>
+
+      <h3>การ Import Python Modules</h3>
+      <p>เมื่อ simulation app ทำงานแล้ว สามารถ import Python modules ต่างๆ จาก Isaac Sim ได้ โดยในที่นี้ import module ดังต่อไปนี้:</p>
+      <p><code>isaaclab.sim</code>: sub-package ใน Isaac Lab สำหรับ core simulator-related operations ทั้งหมด</p>
+
+      <pre data-lang="python"><code><span class="kw">from</span> isaaclab.sim <span class="kw">import</span> <span class="cls">SimulationCfg</span>, <span class="cls">SimulationContext</span></code></pre>
+
+      <h3>การกำหนดค่า Simulation Context</h3>
+      <p>เมื่อเปิด simulator จาก standalone script ผู้ใช้จะมีการควบคุมอย่างสมบูรณ์ในการ play, pause และ step simulator โดย operations เหล่านี้ทั้งหมดจัดการผ่าน simulation context ซึ่งดูแล timeline events ต่างๆ และกำหนดค่า physics scene สำหรับ simulation</p>
+      <p>ใน Isaac Lab, class <code>sim.SimulationContext</code> สืบทอดมาจาก <code>isaacsim.core.api.simulation_context.SimulationContext</code> ของ Isaac Sim เพื่อให้สามารถกำหนดค่า simulation ผ่าน Python dataclass object และจัดการกับความซับซ้อนของการ step simulation</p>
+      <p>สำหรับ tutorial นี้ เราตั้งค่า physics และ rendering time step เป็น 0.01 วินาที</p>
+
+      <pre data-lang="python"><code><span class="cm"># Initialize the simulation context</span>
+sim_cfg = <span class="cls">SimulationCfg</span>(dt=<span class="num">0.01</span>)
+sim = <span class="cls">SimulationContext</span>(sim_cfg)
+<span class="cm"># Set main camera</span>
+sim.<span class="fn">set_camera_view</span>([<span class="num">2.5</span>, <span class="num">2.5</span>, <span class="num">2.5</span>], [<span class="num">0.0</span>, <span class="num">0.0</span>, <span class="num">0.0</span>])</code></pre>
+
+      <p>หลังจากสร้าง simulation context แล้ว เรากำหนดค่าเฉพาะ physics ที่ทำงานบน simulated scene ซึ่งรวมถึง device ที่ใช้สำหรับ simulation, gravity vector และ solver parameters ขั้นสูงอื่นๆ ขั้นตอนหลักอีก 2 ขั้นตอนที่เหลือ ได้แก่:</p>
+      <ul>
+        <li><strong>การออกแบบ simulation scene</strong>: การเพิ่ม sensors, robots และ simulated objects อื่นๆ</li>
+        <li><strong>การรัน simulation loop</strong>: การ step simulator และการ set และ get ข้อมูลจาก simulator</li>
+      </ul>
+      <p>ใน tutorial นี้ เราดู Step 2 ก่อนสำหรับ empty scene เพื่อโฟกัสที่การควบคุม simulation ก่อน</p>
+
+      <h3>การรัน Simulation</h3>
+      <p>สิ่งแรกหลังจากตั้งค่า simulation scene คือการเรียก method <code>sim.SimulationContext.reset()</code> ซึ่งจะ play timeline และ initialize physics handles ใน simulator ต้องเรียกใช้ครั้งแรกเสมอก่อนที่จะ step simulator</p>
+
+      <div class="callout callout-note">
+        <div class="callout-icon">ℹ️</div>
+        <div>
+          <div class="callout-title">หมายเหตุ</div>
+          <p><code>sim.SimulationContext.reset()</code> แตกต่างจาก <code>sim.SimulationContext.play()</code> เนื่องจาก method หลังจะ play timeline เท่านั้นและไม่ได้ initialize physics handles</p>
+        </div>
+      </div>
+
+      <pre data-lang="python"><code><span class="cm"># Play the simulator</span>
+sim.<span class="fn">reset</span>()
+<span class="fn">print</span>(<span class="str">"[INFO]: Setup complete..."</span>)
+
+<span class="cm"># Simulate physics</span>
+<span class="kw">while</span> simulation_app.<span class="fn">is_running</span>():
+    sim.<span class="fn">step</span>()</code></pre>
+
+      <h3>การปิด Simulation</h3>
+      <pre data-lang="python"><code><span class="cm"># close sim app</span>
+simulation_app.<span class="fn">close</span>()</code></pre>
+
+      <h2>การรัน Code</h2>
+      <div class="terminal">
+        <div class="terminal-bar">
+          <div class="terminal-dot"></div><div class="terminal-dot"></div><div class="terminal-dot"></div>
+          <span class="terminal-title">bash</span>
+        </div>
+        <pre><code><span class="prompt">$</span> ./isaaclab.sh -p scripts/tutorials/00_sim/create_empty.py</code></pre>
+      </div>
+      <p>simulation ควรจะเริ่ม play และ stage ควรจะ render ขึ้นมา กด <code>Ctrl+C</code> เพื่อหยุด</p>
+      <p>หากต้องการรันแบบ headless:</p>
+      <div class="terminal">
+        <div class="terminal-bar">
+          <div class="terminal-dot"></div><div class="terminal-dot"></div><div class="terminal-dot"></div>
+          <span class="terminal-title">bash</span>
+        </div>
+        <pre><code><span class="prompt">$</span> ./isaaclab.sh -p scripts/tutorials/00_sim/create_empty.py --headless</code></pre>
+      </div>
+      <p>ตอนนี้ที่เรามีความเข้าใจพื้นฐานเกี่ยวกับวิธีรัน simulation แล้ว มาดู tutorial ต่อไปที่เราจะเรียนรู้วิธีเพิ่ม assets เข้าไปใน stage กัน</p>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>
