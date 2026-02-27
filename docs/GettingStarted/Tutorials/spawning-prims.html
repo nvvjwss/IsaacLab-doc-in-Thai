@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>การ Spawn Prims เข้าไปใน Scene — IsaacLab Docs (TH)</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans+Thai:wght@300;400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../../css/main.css">
+  <link rel="stylesheet" href="../../../css/docs.css">
+  <script src="../../../js/main.js" defer></script>
+</head>
+<body>
+
+<!-- Sidebar -->
+<div id="sidebar-container"></div>
+
+<!-- Main -->
+<div class="main">
+  <div class="topbar">
+    <button class="hamburger" onclick="openSidebar()">☰</button>
+    <div class="breadcrumb">
+      <span>Isaac Lab</span>
+      <span class="sep">›</span>
+      <span>Tutorials</span>
+      <span class="sep">›</span>
+      <span>00_sim</span>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <div class="tutorial-section" id="spawn-prims">
+      <div class="section-badge">Tutorial 02</div>
+      <h1>การ Spawn Prims เข้าไปใน Scene</h1>
+      <p>Tutorial นี้สาธิตวิธีการ spawn objects ต่างๆ (หรือ prims) เข้าไปใน scene ใน Isaac Lab จาก Python โดยต่อยอดจาก tutorial ก่อนหน้าเรื่องการรัน simulator จาก standalone script และสาธิตวิธีการ spawn ground plane, lights, primitive shapes และ meshes จาก USD files</p>
+
+      <div class="callout callout-note">
+        <div class="callout-icon">📄</div>
+        <div>
+          <div class="callout-title">Code</div>
+          <p>tutorial นี้ตรงกับ script <code>spawn_prims.py</code> ในไดเรกทอรี <code>scripts/tutorials/00_sim</code></p>
+        </div>
+      </div>
+
+      <h2>อธิบาย Code</h2>
+      <p>การออกแบบ scene ใน Omniverse สร้างขึ้นรอบๆ ระบบซอฟต์แวร์และรูปแบบไฟล์ที่เรียกว่า <strong>USD (Universal Scene Description)</strong> ซึ่งช่วยให้สามารถอธิบาย 3D scenes ในลักษณะ hierarchical ได้ คล้ายกับ file system แนะนำให้อ่าน USD documentation เพื่อเรียนรู้เพิ่มเติม</p>
+
+      <p>แนวคิดสำคัญของ USD ที่ต้องรู้มีดังนี้:</p>
+      <ul>
+        <li><strong>Primitives (Prims)</strong>: คือ building blocks พื้นฐานของ USD scene คิดได้เหมือน nodes ใน scene graph แต่ละ node อาจเป็น mesh, light, camera หรือ transform และยังสามารถเป็น group ของ prims อื่นๆ ที่อยู่ภายใต้มันได้</li>
+        <li><strong>Attributes</strong>: คือ properties ของ prim คิดได้เหมือน key-value pairs เช่น prim อาจมี attribute ชื่อ color ที่มีค่าเป็น red</li>
+        <li><strong>Relationships</strong>: คือ connections ระหว่าง prims คิดได้เหมือน pointers ไปยัง prims อื่นๆ เช่น mesh prim อาจมี relationship ไปยัง material prim สำหรับ shading</li>
+      </ul>
+      <p>การรวมกันของ prims เหล่านี้พร้อมกับ attributes และ relationships เรียกว่า <strong>USD stage</strong> คิดได้เหมือน container สำหรับ prims ทั้งหมดใน scene Isaac Lab สร้างขึ้นบน USD APIs เพื่อให้มี configuration-driven interface สำหรับการ spawn prims เข้าไปใน scene ผ่าน <code>sim.spawners</code> module</p>
+
+      <pre data-lang="python"><code><span class="cm"># สร้าง configuration class instance</span>
+cfg = <span class="cls">MyPrimCfg</span>()
+prim_path = <span class="str">"/path/to/prim"</span>
+
+<span class="cm"># Spawn prim เข้าไปใน scene</span>
+<span class="fn">spawn_my_prim</span>(prim_path, cfg, translation=[<span class="num">0</span>, <span class="num">0</span>, <span class="num">0</span>], orientation=[<span class="num">1</span>, <span class="num">0</span>, <span class="num">0</span>, <span class="num">0</span>], scale=[<span class="num">1</span>, <span class="num">1</span>, <span class="num">1</span>])
+<span class="cm"># หรือ</span>
+cfg.<span class="fn">func</span>(prim_path, cfg, translation=[<span class="num">0</span>, <span class="num">0</span>, <span class="num">0</span>], orientation=[<span class="num">1</span>, <span class="num">0</span>, <span class="num">0</span>, <span class="num">0</span>], scale=[<span class="num">1</span>, <span class="num">1</span>, <span class="num">1</span>])</code></pre>
+
+      <div class="callout callout-warn">
+        <div class="callout-icon">⚠️</div>
+        <div>
+          <div class="callout-title">ข้อควรระวัง</div>
+          <p>การออกแบบ scene ทั้งหมดต้องเกิดขึ้นก่อนที่ simulation จะเริ่ม เมื่อ simulation เริ่มแล้ว แนะนำให้ scene อยู่นิ่งและแก้ไขแค่ properties ของ prim เท่านั้น ซึ่งสำคัญมากสำหรับ GPU simulation เพราะการเพิ่ม prims ระหว่าง simulation อาจทำให้ physics simulation buffers บน GPU เปลี่ยนแปลงและเกิดพฤติกรรมที่ไม่คาดคิด</p>
+        </div>
+      </div>
+
+      <h3>การ Spawn Ground Plane</h3>
+      <p><code>GroundPlaneCfg</code> กำหนดค่า ground plane แบบ grid ที่สามารถปรับแต่ง properties เช่น ลักษณะและขนาดได้</p>
+      <pre data-lang="python"><code><span class="cm"># Ground-plane</span>
+cfg_ground = sim_utils.<span class="cls">GroundPlaneCfg</span>()
+cfg_ground.<span class="fn">func</span>(<span class="str">"/World/defaultGroundPlane"</span>, cfg_ground)</code></pre>
+
+      <h3>การ Spawn Lights</h3>
+      <p>สามารถ spawn light prims ต่างๆ เข้าไปใน stage ได้ ได้แก่ distant lights, sphere lights, disk lights และ cylinder lights ใน tutorial นี้เรา spawn distant light ซึ่งเป็น light ที่อยู่ไกลอย่างอนันต์จาก scene และส่องในทิศทางเดียว</p>
+      <pre data-lang="python"><code><span class="cm"># spawn distant light</span>
+cfg_light_distant = sim_utils.<span class="cls">DistantLightCfg</span>(
+    intensity=<span class="num">3000.0</span>,
+    color=(<span class="num">0.75</span>, <span class="num">0.75</span>, <span class="num">0.75</span>),
+)
+cfg_light_distant.<span class="fn">func</span>(<span class="str">"/World/lightDistant"</span>, cfg_light_distant, translation=(<span class="num">1</span>, <span class="num">0</span>, <span class="num">10</span>))</code></pre>
+
+      <h3>การ Spawn Primitive Shapes</h3>
+      <p>ก่อน spawn primitive shapes เราแนะนำแนวคิดของ <strong>transform prim หรือ Xform</strong> ซึ่งเป็น prim ที่มีเฉพาะ transformation properties ใช้สำหรับ group prims อื่นๆ ไว้ภายใต้มันและ transform ทั้งหมดพร้อมกัน</p>
+      <pre data-lang="python"><code><span class="cm"># สร้าง xform prim ใหม่เพื่อ group objects ทั้งหมด</span>
+sim_utils.<span class="fn">create_prim</span>(<span class="str">"/World/Objects"</span>, <span class="str">"Xform"</span>)</code></pre>
+
+      <p>Cone1 และ Cone2 เป็น visual elements ไม่มี physics:</p>
+      <pre data-lang="python"><code><span class="cm"># spawn กรวยสีแดง</span>
+cfg_cone = sim_utils.<span class="cls">ConeCfg</span>(
+    radius=<span class="num">0.15</span>,
+    height=<span class="num">0.5</span>,
+    visual_material=sim_utils.<span class="cls">PreviewSurfaceCfg</span>(diffuse_color=(<span class="num">1.0</span>, <span class="num">0.0</span>, <span class="num">0.0</span>)),
+)
+cfg_cone.<span class="fn">func</span>(<span class="str">"/World/Objects/Cone1"</span>, cfg_cone, translation=(<span class="num">-1.0</span>, <span class="num">1.0</span>, <span class="num">1.0</span>))
+cfg_cone.<span class="fn">func</span>(<span class="str">"/World/Objects/Cone2"</span>, cfg_cone, translation=(<span class="num">-1.0</span>, <span class="num">-1.0</span>, <span class="num">1.0</span>))</code></pre>
+
+      <p>ConeRigid มี rigid body physics เพิ่มเข้ามา:</p>
+      <pre data-lang="python"><code><span class="cm"># spawn กรวยสีเขียวพร้อม colliders และ rigid body</span>
+cfg_cone_rigid = sim_utils.<span class="cls">ConeCfg</span>(
+    radius=<span class="num">0.15</span>,
+    height=<span class="num">0.5</span>,
+    rigid_props=sim_utils.<span class="cls">RigidBodyPropertiesCfg</span>(),
+    mass_props=sim_utils.<span class="cls">MassPropertiesCfg</span>(mass=<span class="num">1.0</span>),
+    collision_props=sim_utils.<span class="cls">CollisionPropertiesCfg</span>(),
+    visual_material=sim_utils.<span class="cls">PreviewSurfaceCfg</span>(diffuse_color=(<span class="num">0.0</span>, <span class="num">1.0</span>, <span class="num">0.0</span>)),
+)
+cfg_cone_rigid.<span class="fn">func</span>(
+    <span class="str">"/World/Objects/ConeRigid"</span>, cfg_cone_rigid,
+    translation=(<span class="num">-0.2</span>, <span class="num">0.0</span>, <span class="num">2.0</span>), orientation=(<span class="num">0.5</span>, <span class="num">0.0</span>, <span class="num">0.5</span>, <span class="num">0.0</span>)
+)</code></pre>
+
+      <p>CuboidDeformable มี deformable body physics ซึ่งต่างจาก rigid body ตรงที่ vertices สามารถขยับสัมพัทธ์กันได้ เหมาะสำหรับ simulate soft bodies เช่น ผ้า, ยาง หรือเยลลี่ โดย deformable bodies รองรับเฉพาะ GPU simulation เท่านั้น:</p>
+      <pre data-lang="python"><code><span class="cm"># spawn cuboid สีน้ำเงินพร้อม deformable body</span>
+cfg_cuboid_deformable = sim_utils.<span class="cls">MeshCuboidCfg</span>(
+    size=(<span class="num">0.2</span>, <span class="num">0.5</span>, <span class="num">0.2</span>),
+    deformable_props=sim_utils.<span class="cls">DeformableBodyPropertiesCfg</span>(),
+    visual_material=sim_utils.<span class="cls">PreviewSurfaceCfg</span>(diffuse_color=(<span class="num">0.0</span>, <span class="num">0.0</span>, <span class="num">1.0</span>)),
+    physics_material=sim_utils.<span class="cls">DeformableBodyMaterialCfg</span>(),
+)
+cfg_cuboid_deformable.<span class="fn">func</span>(<span class="str">"/World/Objects/CuboidDeformable"</span>, cfg_cuboid_deformable, translation=(<span class="num">0.15</span>, <span class="num">0.0</span>, <span class="num">2.0</span>))</code></pre>
+
+      <h3>การ Spawn จากไฟล์อื่น</h3>
+      <p>สามารถ spawn prims จากรูปแบบไฟล์อื่นๆ เช่น USD, URDF หรือ OBJ files ได้ ในที่นี้เรา spawn USD file ของโต๊ะเข้าไปใน scene</p>
+      <pre data-lang="python"><code><span class="cm"># spawn usd file ของโต๊ะเข้าไปใน scene</span>
+cfg = sim_utils.<span class="cls">UsdFileCfg</span>(usd_path=<span class="str">f"{ISAAC_NUCLEUS_DIR}/Props/Mounts/SeattleLabTable/table_instanceable.usd"</span>)
+cfg.<span class="fn">func</span>(<span class="str">"/World/Objects/Table"</span>, cfg, translation=(<span class="num">0.0</span>, <span class="num">0.0</span>, <span class="num">1.05</span>))</code></pre>
+
+      <p>โต๊ะถูกเพิ่มเข้าไปเป็น <strong>reference</strong> ใน scene หมายความว่าไม่ได้เพิ่มโต๊ะจริงๆ เข้าไปใน scene แต่เพิ่ม pointer ไปยัง table asset แทน ซึ่งช่วยให้สามารถแก้ไข table asset และมีการเปลี่ยนแปลงสะท้อนใน scene แบบ non-destructive เช่น เปลี่ยน material ของโต๊ะโดยไม่ต้องแก้ไขไฟล์ต้นฉบับโดยตรง โดยจะเก็บเฉพาะการเปลี่ยนแปลงไว้ใน USD stage</p>
+
+      <h2>การรัน Script</h2>
+      <div class="terminal">
+        <div class="terminal-bar">
+          <div class="terminal-dot"></div><div class="terminal-dot"></div><div class="terminal-dot"></div>
+          <span class="terminal-title">bash</span>
+        </div>
+        <pre><code><span class="prompt">$</span> ./isaaclab.sh -p scripts/tutorials/00_sim/spawn_prims.py</code></pre>
+      </div>
+      <p>เมื่อ simulation เริ่มขึ้น จะเห็นหน้าต่างที่มี ground plane, light, กรวยหลายอัน และโต๊ะ กรวยสีเขียวที่มี rigid body physics จะตกลงมาและชนกับโต๊ะและ ground plane ส่วนกรวยอื่นๆ เป็น visual elements จะไม่เคลื่อนที่ กด <code>Ctrl+C</code> เพื่อหยุด simulation</p>
+      <img src="../../../assets/images/tutorial_spawn_prims.jpg" alt="Tutorial Spawn Prims" style="width:100%; border-radius:6px; margin: 16px 0;">
+      <p>Tutorial นี้เป็นพื้นฐานสำหรับการ spawn prims ต่างๆ เข้าไปใน scene ใน Isaac Lab และสาธิต basic concepts ของการออกแบบ scene ใน tutorials ต่อไปเราจะดูวิธีการ interact กับ scene และ simulation</p>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>

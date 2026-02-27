@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Deep-dive into AppLauncher — IsaacLab Docs (TH)</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans+Thai:wght@300;400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../../css/main.css">
+  <link rel="stylesheet" href="../../../css/docs.css">
+  <script src="../../../js/main.js" defer></script>
+</head>
+<body>
+
+<!-- Sidebar -->
+<div id="sidebar-container"></div>
+
+<!-- Main -->
+<div class="main">
+  <div class="topbar">
+    <button class="hamburger" onclick="openSidebar()">☰</button>
+    <div class="breadcrumb">
+      <span>Isaac Lab</span>
+      <span class="sep">›</span>
+      <span>Tutorials</span>
+      <span class="sep">›</span>
+      <span>00_sim</span>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <div class="tutorial-section" id="applaunch">
+      <div class="section-badge">Tutorial 03</div>
+      <h1>Deep-dive into AppLauncher</h1>
+      <p>ใน tutorial นี้ เราจะเจาะลึก class <code>app.AppLauncher</code> เพื่อกำหนดค่า simulator โดยใช้ CLI arguments และ environment variables (envars) โดยเฉพาะอย่างยิ่ง เราจะสาธิตวิธีใช้ AppLauncher เพื่อเปิดใช้งาน livestreaming และกำหนดค่า <code>isaacsim.simulation_app.SimulationApp</code> instance ที่มันครอบอยู่ พร้อมกับรองรับ options ที่ผู้ใช้กำหนดเองด้วย</p>
+      <p>AppLauncher เป็น wrapper สำหรับ SimulationApp เพื่อทำให้การกำหนดค่าง่ายขึ้น SimulationApp มี extensions หลายตัวที่ต้องโหลดเพื่อเปิดใช้งานความสามารถต่างๆ และ extensions บางตัวมีความสัมพันธ์ในด้านลำดับและการพึ่งพากัน นอกจากนี้ยังมี startup options เช่น headless ที่ต้องกำหนดตอน instantiation และมีความสัมพันธ์โดยนัยกับ extensions บางตัว เช่น livestreaming extensions AppLauncher นำเสนอ interface ที่จัดการ extensions และ startup options เหล่านี้ได้อย่างเหมาะสมในหลากหลาย use cases</p>
+
+      <div class="callout callout-note">
+        <div class="callout-icon">📄</div>
+        <div>
+          <div class="callout-title">Code</div>
+          <p>tutorial นี้ตรงกับ script <code>launch_app.py</code> ในไดเรกทอรี <code>scripts/tutorials/00_sim</code></p>
+        </div>
+      </div>
+
+      <h2>อธิบาย Code</h2>
+
+      <h3>การเพิ่ม Arguments เข้าไปใน Argparser</h3>
+      <p>AppLauncher ถูกออกแบบให้เข้ากันได้กับ custom CLI args ที่ผู้ใช้ต้องการสำหรับ scripts ของตัวเอง พร้อมทั้งยังให้ portable CLI interface อยู่</p>
+      <p>ใน tutorial นี้ <code>argparse.ArgumentParser</code> มาตรฐานถูก instantiate และได้รับ argument <code>--size</code> ที่เฉพาะสำหรับ script นี้ รวมถึง arguments <code>--height</code> และ <code>--width</code> ซึ่งถูกรับโดย SimulationApp</p>
+      <p>argument <code>--size</code> ไม่ได้ถูกใช้โดย AppLauncher แต่จะรวมเข้ากับ AppLauncher interface ได้อย่างราบรื่น arguments ภายใน script สามารถรวมกับ AppLauncher interface ผ่าน method <code>add_app_launcher_args()</code> ซึ่งจะ return ArgumentParser ที่แก้ไขแล้วพร้อม AppLauncher arguments ที่เพิ่มเข้ามา จากนั้นสามารถประมวลผลเป็น <code>argparse.Namespace</code> โดยใช้ method <code>argparse.ArgumentParser.parse_args()</code> มาตรฐาน และส่งไปยัง AppLauncher โดยตรงสำหรับการ instantiate</p>
+
+      <pre data-lang="python"><code><span class="kw">import</span> argparse
+<span class="kw">from</span> isaaclab.app <span class="kw">import</span> <span class="cls">AppLauncher</span>
+
+<span class="cm"># สร้าง argparser</span>
+parser = argparse.<span class="fn">ArgumentParser</span>(description=<span class="str">"Tutorial on running IsaacSim via the AppLauncher."</span>)
+parser.<span class="fn">add_argument</span>(<span class="str">"--size"</span>, type=<span class="cls">float</span>, default=<span class="num">1.0</span>, help=<span class="str">"Side-length of cuboid"</span>)
+<span class="cm"># SimulationApp arguments</span>
+parser.<span class="fn">add_argument</span>(
+    <span class="str">"--width"</span>, type=<span class="cls">int</span>, default=<span class="num">1280</span>, help=<span class="str">"Width of the viewport and generated images. Defaults to 1280"</span>
+)
+parser.<span class="fn">add_argument</span>(
+    <span class="str">"--height"</span>, type=<span class="cls">int</span>, default=<span class="num">720</span>, help=<span class="str">"Height of the viewport and generated images. Defaults to 720"</span>
+)
+
+<span class="cm"># เพิ่ม AppLauncher cli args</span>
+<span class="cls">AppLauncher</span>.<span class="fn">add_app_launcher_args</span>(parser)
+<span class="cm"># parse arguments</span>
+args_cli = parser.<span class="fn">parse_args</span>()
+<span class="cm"># เปิด omniverse app</span>
+app_launcher = <span class="cls">AppLauncher</span>(args_cli)
+simulation_app = app_launcher.app</code></pre>
+
+      <h3>การทำความเข้าใจ Output ของ --help</h3>
+      <p>เมื่อรัน script สามารถส่ง argument <code>--help</code> เพื่อดู combined outputs ของ custom arguments และ AppLauncher arguments ได้</p>
+
+      <div class="terminal">
+        <div class="terminal-bar">
+          <div class="terminal-dot"></div><div class="terminal-dot"></div><div class="terminal-dot"></div>
+          <span class="terminal-title">bash</span>
+        </div>
+        <pre><code><span class="prompt">$</span> ./isaaclab.sh -p scripts/tutorials/00_sim/launch_app.py --help
+
+[INFO] Using python from: /isaac-sim/python.sh
+[INFO][AppLauncher]: The argument 'width' will be used to configure the SimulationApp.
+[INFO][AppLauncher]: The argument 'height' will be used to configure the SimulationApp.
+usage: launch_app.py [-h] [--size SIZE] [--width WIDTH] [--height HEIGHT]
+                     [--headless] [--livestream {0,1,2}] ...
+
+options:
+  --size SIZE           Side-length of cuboid
+  --width WIDTH         Width of the viewport and generated images.
+  --height HEIGHT       Height of the viewport and generated images.
+
+app_launcher arguments:
+  --headless            Force display off at all times.
+  --livestream {0,1,2}  Force enable livestreaming.
+  --enable_cameras      Enable cameras when running without a GUI.
+  --verbose             Enable verbose terminal logging from the SimulationApp.
+  --experience EXPERIENCE</code></pre>
+      </div>
+
+      <p>ข้อความ <code>[INFO]</code> ก่อน help output แสดงให้เห็นว่า arguments ใดจะถูกตีความเป็น arguments สำหรับ SimulationApp instance ที่ AppLauncher ครอบอยู่ ในกรณีนี้คือ <code>--height</code> และ <code>--width</code></p>
+
+      <h3>การใช้ Environment Variables</h3>
+      <p>AppLauncher arguments (<code>--livestream</code>, <code>--headless</code>) มี environment variables (envar) ที่สอดคล้องกันด้วย การส่ง arguments เหล่านี้ผ่าน CLI เทียบเท่ากับการรัน script ในสภาพแวดล้อมที่ตั้งค่า envar ที่สอดคล้องกันไว้</p>
+      <p>การรองรับ AppLauncher envars เป็นเพียงความสะดวกสำหรับการ provide session-persistent configurations และสามารถตั้งค่าใน <code>${HOME}/.bashrc</code> สำหรับการตั้งค่าที่คงอยู่ระหว่าง sessions ในกรณีที่ arguments เหล่านี้ถูกส่งมาจาก CLI จะ override envar ที่สอดคล้องกัน</p>
+
+      <div class="callout callout-warn">
+        <div class="callout-icon">⚠️</div>
+        <div>
+          <div class="callout-title">ข้อยกเว้น</div>
+          <p><code>--enable_cameras</code> ตั้งค่า rendering pipeline ให้ใช้ offscreen renderer แต่ใช้งานได้เฉพาะกับ <code>isaaclab.sim.SimulationContext</code> เท่านั้น ไม่ใช้งานกับ <code>isaacsim.core.api.simulation_context.SimulationContext</code> ของ Isaac Sim</p>
+        </div>
+      </div>
+
+      <h2>การรัน Code</h2>
+      <p>รัน script พร้อม LIVESTREAM envar:</p>
+      <div class="terminal">
+        <div class="terminal-bar">
+          <div class="terminal-dot"></div><div class="terminal-dot"></div><div class="terminal-dot"></div>
+          <span class="terminal-title">bash</span>
+        </div>
+        <pre><code><span class="prompt">$</span> LIVESTREAM=2 ./isaaclab.sh -p scripts/tutorials/00_sim/launch_app.py --size 0.5</code></pre>
+      </div>
+      <p>จะ spawn cuboid ขนาด 0.5m³ ใน simulation โดยไม่มี GUI ปรากฏขึ้น เทียบเท่ากับการส่ง <code>--headless</code> flag เพราะ headlessness เป็นนัยจาก LIVESTREAM envar หากต้องการ visualization สามารถใช้ Isaac's WebRTC Livestreaming ได้ กด <code>Ctrl+C</code> เพื่อหยุด</p>
+      <img src="../../../assets/images/tutorial_launch_app.jpg" alt="Tutorial Launch App" style="width:100%; border-radius:6px; margin: 16px 0;">
+
+      <p>ทดสอบ conflicting commands:</p>
+      <div class="terminal">
+        <div class="terminal-bar">
+          <div class="terminal-dot"></div><div class="terminal-dot"></div><div class="terminal-dot"></div>
+          <span class="terminal-title">bash</span>
+        </div>
+        <pre><code><span class="prompt">$</span> LIVESTREAM=0 ./isaaclab.sh -p scripts/tutorials/00_sim/launch_app.py --size 0.5 --livestream 2</code></pre>
+      </div>
+      <p>จะทำงานเหมือนกับการรันก่อนหน้า เพราะแม้ว่าเราตั้ง <code>LIVESTREAM=0</code> ใน envars แต่ CLI args เช่น <code>--livestream</code> มีความสำคัญกว่าในการกำหนดพฤติกรรม</p>
+
+      <p>ส่ง arguments ไปยัง SimulationApp ผ่าน AppLauncher:</p>
+      <div class="terminal">
+        <div class="terminal-bar">
+          <div class="terminal-dot"></div><div class="terminal-dot"></div><div class="terminal-dot"></div>
+          <span class="terminal-title">bash</span>
+        </div>
+        <pre><code><span class="prompt">$</span> LIVESTREAM=2 ./isaaclab.sh -p scripts/tutorials/00_sim/launch_app.py --size 0.5 --width 1920 --height 1080</code></pre>
+      </div>
+      <p>จะทำงานเหมือนเดิม แต่ตอนนี้ viewport จะถูก render ที่ความละเอียด 1920x1080p ซึ่งมีประโยชน์เมื่อต้องการเก็บวิดีโอความละเอียดสูง หรือสามารถระบุความละเอียดต่ำลงหากต้องการให้ simulation ทำงานได้ดีขึ้น กด <code>Ctrl+C</code> เพื่อหยุด</p>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>

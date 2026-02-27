@@ -5,29 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>IsaacLab Docs (TH)</title>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans+Thai:wght@300;400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../css/main.css">
-  <link rel="stylesheet" href="../css/docs.css">
+  <link rel="stylesheet" href="../../../css/main.css">
+  <link rel="stylesheet" href="../../../css/docs.css">
+  <script src="../../../js/main.js" defer></script>
 </head>
 <body>
 
 <!-- Sidebar -->
-<aside nav class="sidebar">
-  <div class="sidebar-logo">
-    <span>Isaac Lab Docs</span>
-    <span class="version">Tutorial Series · TH</span>
-  </div>
-
-  <div class="nav-section">Tutorials 00_sim</div>
-  <a class="nav-item active" href="#create-empty">การสร้าง Empty Scene</a>
-  <a class="nav-item" href="#spawn-prims">การ Spawn Prims</a>
-  <a class="nav-item" href="#applaunch">Deep-dive into AppLauncher</a>
-  <div class="nav-section">Tutorials 01_assets</div>
-  <a class="nav-item" href="#new-robot">การเพิ่ม Robot ใหม่</a>
-</aside>
+<div id="sidebar-container"></div>
 
 <!-- Main -->
 <div class="main">
   <div class="topbar">
+    <button class="hamburger" onclick="openSidebar()">☰</button>
     <div class="breadcrumb">
       <span>Isaac Lab</span>
       <span class="sep">›</span>
@@ -255,7 +245,7 @@ cfg.<span class="fn">func</span>(<span class="str">"/World/Objects/Table"</span>
         <pre><code><span class="prompt">$</span> ./isaaclab.sh -p scripts/tutorials/00_sim/spawn_prims.py</code></pre>
       </div>
       <p>เมื่อ simulation เริ่มขึ้น จะเห็นหน้าต่างที่มี ground plane, light, กรวยหลายอัน และโต๊ะ กรวยสีเขียวที่มี rigid body physics จะตกลงมาและชนกับโต๊ะและ ground plane ส่วนกรวยอื่นๆ เป็น visual elements จะไม่เคลื่อนที่ กด <code>Ctrl+C</code> เพื่อหยุด simulation</p>
-      <img src="../assets/images/tutorial_spawn_prims.jpg" alt="Tutorial Spawn Prims" style="width:100%; border-radius:6px; margin: 16px 0;">
+      <img src="../../../assets/images/tutorial_spawn_prims.jpg" alt="Tutorial Spawn Prims" style="width:100%; border-radius:6px; margin: 16px 0;">
       <p>Tutorial นี้เป็นพื้นฐานสำหรับการ spawn prims ต่างๆ เข้าไปใน scene ใน Isaac Lab และสาธิต basic concepts ของการออกแบบ scene ใน tutorials ต่อไปเราจะดูวิธีการ interact กับ scene และ simulation</p>
     </div>
 
@@ -356,7 +346,7 @@ app_launcher arguments:
         <pre><code><span class="prompt">$</span> LIVESTREAM=2 ./isaaclab.sh -p scripts/tutorials/00_sim/launch_app.py --size 0.5</code></pre>
       </div>
       <p>จะ spawn cuboid ขนาด 0.5m³ ใน simulation โดยไม่มี GUI ปรากฏขึ้น เทียบเท่ากับการส่ง <code>--headless</code> flag เพราะ headlessness เป็นนัยจาก LIVESTREAM envar หากต้องการ visualization สามารถใช้ Isaac's WebRTC Livestreaming ได้ กด <code>Ctrl+C</code> เพื่อหยุด</p>
-      <img src="../assets/images/tutorial_launch_app.jpg" alt="Tutorial Spawn Prims" style="width:100%; border-radius:6px; margin: 16px 0;">
+      <img src="../../../assets/images/tutorial_launch_app.jpg" alt="Tutorial Launch App" style="width:100%; border-radius:6px; margin: 16px 0;">
       <p>ทดสอบ conflicting commands:</p>
       <div class="terminal">
         <div class="terminal-bar">
@@ -563,27 +553,11 @@ JETBOT_CONFIG = <span class="cls">ArticulationCfg</span>(
           <p>อาจเห็น warning ว่าไม่ได้ configure actuators ทั้งหมด ซึ่งเป็นเรื่องปกติเพราะ tutorial นี้ไม่ได้จัดการ gripper ของ Dofbot</p>
         </div>
       </div>
-      <img src="../assets/images/tutorial_add_new_robot_result.jpg" alt="Tutorial Spawn Prims" style="width:100%; border-radius:6px; margin: 16px 0;">
+      <img src="../../../assets/images/tutorial_add_new_robot_result.jpg" alt="Tutorial Add New Robot" style="width:100%; border-radius:6px; margin: 16px 0;">
     </div>
 
   </div>
 </div>
 
-<script>
-  // Active nav highlight
-  const sections = document.querySelectorAll('.tutorial-section');
-  const navItems = document.querySelectorAll('.nav-item');
-
-  window.addEventListener('scroll', () => {
-    let current = '';
-    sections.forEach(s => {
-      if (window.scrollY >= s.offsetTop - 120) current = s.id;
-    });
-    navItems.forEach(n => {
-      n.classList.remove('active');
-      if (n.getAttribute('href') === '#' + current) n.classList.add('active');
-    });
-  });
-</script>
 </body>
 </html>

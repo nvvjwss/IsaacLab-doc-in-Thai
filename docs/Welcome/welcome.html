@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Welcome to Isaac Lab — IsaacLab Docs (TH)</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans+Thai:wght@300;400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../css/main.css">
+  <link rel="stylesheet" href="../../css/docs.css">
+  <script src="../../js/main.js" defer></script>
+</head>
+<body>
+
+<!-- Sidebar -->
+<div id="sidebar-container"></div>
+
+<!-- Main -->
+<div class="main">
+  <div class="topbar">
+    <button class="hamburger" onclick="openSidebar()">☰</button>
+    <div class="breadcrumb">
+      <span>Isaac Lab</span>
+      <span class="sep">›</span>
+      <span>Welcome</span>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <div class="tutorial-section" id="welcome">
+      <div class="section-badge">Overview</div>
+      <h1>ยินดีต้อนรับสู่ Isaac Lab!</h1>
+
+      <img src="../../assets/images/isaaclabwelcome1.jpg" alt="Isaac Lab" style="width:100%; border-radius:6px; margin: 16px 0 24px;">
+
+      <p>Isaac Lab คือ framework สำหรับ robot learning ที่รวมทุกอย่างไว้ในที่เดียวและมีความ modular สูง โดยมีเป้าหมายเพื่อทำให้ workflows ทั่วไปในการวิจัยด้าน robotics ง่ายขึ้น เช่น reinforcement learning, learning from demonstrations และ motion planning โดยสร้างขึ้นบน NVIDIA Isaac Sim เพื่อใช้ประโยชน์จากความสามารถ simulation ล่าสุดสำหรับ photo-realistic scenes และการ simulate ที่รวดเร็วและมีประสิทธิภาพ</p>
+
+      <p>เป้าหมายหลักของ framework มีดังนี้:</p>
+      <ul>
+        <li><strong>Modularity</strong>: ปรับแต่งและเพิ่ม environments, robots และ sensors ใหม่ได้ง่าย</li>
+        <li><strong>Agility</strong>: ปรับตัวให้เข้ากับความต้องการที่เปลี่ยนแปลงของ community</li>
+        <li><strong>Openness</strong>: เป็น open-source เพื่อให้ community สามารถ contribute และขยายต่อได้</li>
+        <li><strong>Batteries-included</strong>: มี environments, sensors และ tasks จำนวนมากที่พร้อมใช้งานทันที</li>
+      </ul>
+
+      <p>features หลักที่มีใน Isaac Lab ได้แก่ physics simulation ที่รวดเร็วและแม่นยำโดย PhysX, tiled rendering APIs สำหรับ vectorized rendering, domain randomization เพื่อเพิ่ม robustness และความสามารถในการปรับตัว และรองรับการรันบน cloud</p>
+
+      <p>นอกจากนี้ Isaac Lab ยังมี environments หลากหลายประเภท และกำลังเพิ่ม environments ใหม่อย่างต่อเนื่อง ได้แก่ classic control tasks, fixed-arm และ dexterous manipulation tasks, legged locomotion tasks และ navigation tasks</p>
+
+      <h2>Robots ที่พร้อมใช้งาน</h2>
+      <p>Isaac Lab มี robot assets ที่ฝังมาพร้อมกับ platform และพร้อม train ได้ทันทีดังนี้:</p>
+      <ul>
+        <li><strong>Classic</strong>: Cartpole, Humanoid, Ant</li>
+        <li><strong>Fixed-Arm and Hands</strong>: UR10, Franka, Allegro, Shadow Hand</li>
+        <li><strong>Quadrupeds</strong>: Anybotics Anymal-B, Anymal-C, Anymal-D, Unitree A1, Unitree Go1, Unitree Go2, Boston Dynamics Spot</li>
+        <li><strong>Humanoids</strong>: Unitree H1, Unitree G1</li>
+        <li><strong>Quadcopter</strong>: Crazyflie</li>
+      </ul>
+
+      <div class="callout callout-note">
+        <div class="callout-icon">ℹ️</div>
+        <div>
+          <div class="callout-title">เพิ่ม Robot ของคุณเอง</div>
+          <p>platform ยังถูกออกแบบให้สามารถเพิ่ม robot ของคุณเองได้ กรุณาดูรายละเอียดในส่วน How-to Guides</p>
+        </div>
+      </div>
+      <img src="../../assets/images/isaaclabwelcome2.jpg" alt="Isaac Lab" style="width:100%; border-radius:6px; margin: 16px 0 24px;">
+
+      <h2>License</h2>
+      <p>Isaac Lab framework เป็น open-source ภายใต้ <strong>BSD-3-Clause license</strong> โดยบางส่วนอยู่ภายใต้ <strong>Apache-2.0 license</strong> กรุณาดูรายละเอียดเพิ่มเติมในส่วน License</p>
+
+      <h2>Citation</h2>
+      <p>หากใช้ Isaac Lab ในงานวิจัย กรุณา cite technical report ดังนี้:</p>
+
+      <pre data-lang="bibtex"><code>@article{mittal2025isaaclab,
+   title={Isaac Lab: A GPU-Accelerated Simulation Framework
+          for Multi-Modal Robot Learning},
+   author={Mayank Mittal and Pascal Roth and James Tigue
+           and Antoine Richard et al.},
+   journal={arXiv preprint arXiv:2511.04831},
+   year={2025},
+   url={https://arxiv.org/abs/2511.04831}
+}</code></pre>
+
+      <h2>Acknowledgement</h2>
+      <p>การพัฒนา Isaac Lab เริ่มต้นมาจาก <strong>Orbit framework</strong> ขอขอบคุณผู้เขียน Orbit สำหรับการวางรากฐานที่สำคัญ</p>
+
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>
