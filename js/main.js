@@ -39,22 +39,47 @@ function toggleSubgroup(header) {
 }
 
 /* ============================================
-   Sidebar — loader
+   Sidebar — loader & Path Updater
    ============================================ */
 function loadSidebar() {
   const container = document.getElementById('sidebar-container');
   if (!container) return;
 
-  // คำนวณ path กลับไปที่ root จาก URL ปัจจุบัน
+  // 1. คำนวณ path กลับไปที่ root จาก URL ปัจจุบันให้ถูกต้อง (แก้ไขสูตรลบ 1)
   const parts = window.location.pathname.split('/').filter(p => p && p !== 'index.html');
   const docsIndex = parts.indexOf('docs');
-  const levelsDeep = docsIndex >= 0 ? parts.length - docsIndex : 0;
+  const levelsDeep = docsIndex >= 0 ? (parts.length - 1) - docsIndex : 0;
   const prefix = levelsDeep > 0 ? '../'.repeat(levelsDeep) : './';
 
+  // 2. ดึงไฟล์ sidebar.html
   fetch(prefix + 'components/sidebar.html')
     .then(r => r.text())
     .then(html => {
+      // แปะโค้ดลงในหน้าเว็บ
       container.innerHTML = html;
+      
+      // 3. อัปเดต Path ของทุกลิงก์และรูปภาพใน Sidebar ให้อ้างอิงจากโฟลเดอร์ root
+      const elementsWithPaths = container.querySelectorAll('a[href], img[src]');
+      elementsWithPaths.forEach(el => {
+        // จัดการแท็ก <a>
+        if (el.hasAttribute('href')) {
+          let href = el.getAttribute('href');
+          // ข้ามพวกลิงก์ออกเว็บนอก (http) หรือลิงก์กระโดดข้ามหน้า (#)
+          if (!href.startsWith('http') && !href.startsWith('#') && !href.startsWith('mailto:')) {
+            el.setAttribute('href', prefix + href);
+          }
+        }
+        // จัดการแท็ก <img>
+        if (el.hasAttribute('src')) {
+          let src = el.getAttribute('src');
+          // ข้ามลิงก์รูปเว็บนอก (http) หรือ base64 data
+          if (!src.startsWith('http') && !src.startsWith('data:')) {
+            el.setAttribute('src', prefix + src);
+          }
+        }
+      });
+
+      // เรียกใช้งาน Highlight เมนูตอนเลื่อนหน้าจอ
       initScrollHighlight();
     })
     .catch(err => console.error('Sidebar load failed:', err));
@@ -76,7 +101,7 @@ function initScrollHighlight() {
     });
     navItems.forEach(n => {
       n.classList.remove('active');
-      if (current && n.getAttribute('href') === '#' + current) {
+      if (current && n.getAttribute('href').endsWith('#' + current)) {
         n.classList.add('active');
       }
     });
@@ -97,10 +122,14 @@ document.addEventListener('DOMContentLoaded', loadSidebar);
    ============================================ */
 function openSidebar() {
   document.querySelector('.sidebar').classList.add('open');
-  document.querySelector('.sidebar-overlay').classList.add('open');
+  if (document.querySelector('.sidebar-overlay')) {
+    document.querySelector('.sidebar-overlay').classList.add('open');
+  }
 }
 
 function closeSidebar() {
   document.querySelector('.sidebar').classList.remove('open');
-  document.querySelector('.sidebar-overlay').classList.remove('open');
+  if (document.querySelector('.sidebar-overlay')) {
+    document.querySelector('.sidebar-overlay').classList.remove('open');
+  }
 }
