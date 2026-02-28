@@ -130,10 +130,11 @@
 }
 
 .nav-subgroup-arrow {
-  font-size: 7px;
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
   color: var(--text-dim);
   transition: transform 0.2s ease;
-  line-height: 1;
 }
 
 .nav-subgroup.open .nav-subgroup-arrow {
