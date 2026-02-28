@@ -55,9 +55,10 @@ function loadSidebar() {
   fetch(prefix + 'components/sidebar.html')
     .then(r => r.text())
     .then(html => {
-      // ลบ <script> ออกจาก raw text ก่อน parse เลย
-      // (live-server inject script เข้าไปใน SVG — ต้องลบจาก text ก่อน ไม่งั้น structure พัง)
-      html = html.replace(/<script\b[\s\S]*?<\/script>/gi, '');
+      // ตัดทุกอย่างตั้งแต่ </body> ลงไป
+      // live-server จะ inject script ก่อน </body> เสมอ → ตัดทิ้งได้เลย
+      const bodyClose = html.indexOf('</body>');
+      if (bodyClose !== -1) html = html.substring(0, bodyClose);
 
       container.innerHTML = html;
 
