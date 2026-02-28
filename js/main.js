@@ -55,8 +55,18 @@ function loadSidebar() {
   fetch(prefix + 'components/sidebar.html')
     .then(r => r.text())
     .then(html => {
-      // แปะโค้ดลงในหน้าเว็บ
-      container.innerHTML = html;
+      // ใช้ DOMParser เพื่อ parse HTML อย่างถูกต้อง (แก้ปัญหา live-server inject script เข้า SVG)
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
+
+      // ลบ script ที่ live-server inject เข้ามาทิ้ง
+      doc.querySelectorAll('script').forEach(s => s.remove());
+
+      // นำ nodes ที่ parse แล้วใส่ใน container
+      container.innerHTML = '';
+      Array.from(doc.body.childNodes).forEach(node => {
+        container.appendChild(document.importNode(node, true));
+      });
       
       // 3. อัปเดต Path ของทุกลิงก์และรูปภาพใน Sidebar ให้อ้างอิงจากโฟลเดอร์ root
       const elementsWithPaths = container.querySelectorAll('a[href], img[src]');
